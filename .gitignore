@@ -9,4 +9,4 @@ dist/
 chroma_db/
 eval/results.json
 report.md
-
+AGENTS.md

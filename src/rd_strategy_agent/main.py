@@ -23,7 +23,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # Validate required env vars
-    missing = [k for k in ["OPENAI_API_KEY", "TAVILY_API_KEY"] if not os.getenv(k)]
+    missing = [k for k in ["OPENAI_API_KEY", "EXA_API_KEY"] if not os.getenv(k)]
     if missing:
         raise SystemExit(f"Missing environment variables: {', '.join(missing)}\nCopy .env.example → .env and fill in keys.")
 
@@ -41,6 +41,7 @@ def main() -> None:
         "threat_matrix": [],
         "draft_report": "",
         "reference_list": [],
+        "report_retry_count": 0,
         "last_error": None,
         "next_task": args.query,
     }

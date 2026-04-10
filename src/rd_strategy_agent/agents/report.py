@@ -64,6 +64,8 @@ def report_agent(state: AgentState) -> dict:
         HumanMessage(content=context),
     ])
     draft = response.content
+    if "## REFERENCE" not in draft:
+        draft = draft.rstrip() + "\n\n## REFERENCE\n"
 
     # Build reference list from in-text citations
     citation_ids = sorted(set(re.findall(r"\[(\d+)\]", draft)), key=int)
@@ -76,7 +78,7 @@ def report_agent(state: AgentState) -> dict:
             ReferenceItem(
                 citation_id=f"[{cid}]",
                 url=src.get("url", ""),
-                title=src.get("title", f"Source {cid}"),
+                title=src.get("title", "[매핑 불가]"),
                 accessed_date=today,
             )
         )

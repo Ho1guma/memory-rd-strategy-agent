@@ -14,14 +14,15 @@ class EvidenceItem(TypedDict):
     domain: str
     keywords: list[str]
     entities: list[str]
+    tagging_status: str    # "ok" | "tagging_unavailable"
 
 
 class TRLEntry(TypedDict):
     company: str
     technology: str
-    trl_range: str        # e.g., "5-6"
+    trl_range: str        # e.g., "5-6" | "7" | "정보 부족"
     evidence_count: int
-    label: str            # "confirmed" | "estimated"
+    label: str            # "confirmed" | "estimated" | "insufficient"
     sources: list[str]    # citation_ids
 
 
@@ -61,6 +62,7 @@ class AgentState(TypedDict):
     # G3 — report
     draft_report: str
     reference_list: list[ReferenceItem]
+    report_retry_count: int
     # Control
     last_error: str | None
     next_task: str | None                                          # Supervisor routing signal

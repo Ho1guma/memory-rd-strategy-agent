@@ -7,7 +7,10 @@ technologies:
   - PIM
   - CXL
 
-competitors: []  # e.g., [Samsung, SK Hynix, Micron, Intel, AMD]
+competitors:
+  - Samsung
+  - Micron
+  - Intel
 
 keywords:
   - HBM4 bandwidth memory
@@ -20,7 +23,10 @@ max_competitors: 5         # Control strategy: scope explosion guard
 
 # Threat level decision rule (SC2-2) — fixed once confirmed
 threat_level_rules:
-  high: "TRL >= 7"
-  medium: "TRL 4-6"
-  low: "TRL <= 3"
-  escalation: "investment or hiring signal detected → upgrade one level"
+  high_min_trl: 7
+  medium_min_trl: 5
+  medium_max_trl: 6
+  low_max_trl: 4
+  escalation_signal:
+    hiring: true
+    investment: true

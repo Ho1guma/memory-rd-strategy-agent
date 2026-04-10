@@ -17,10 +17,10 @@ from rd_strategy_agent.agents.websearch import websearch_agent
 from rd_strategy_agent.agents.retrieve import retrieve_index
 from rd_strategy_agent.agents.analysis import analysis_agent
 from rd_strategy_agent.agents.report import report_agent
-from rd_strategy_agent import utils
 from rd_strategy_agent.utils import sc_checker
 
 MAX_RETRIES = 3
+MAX_REPORT_RETRIES = 2
 
 
 # ---------------------------------------------------------------------------
@@ -123,13 +123,20 @@ def route_after_sc2(state: AgentState) -> str:
 
 def route_after_sc3(state: AgentState) -> str:
     sc = state.get("sc_status", {})
+    report_iteration = state.get("report_retry_count", 0)
     if sc.get("SC3_1") == "pass" and sc.get("SC3_2") == "pass":
         return END
-    return "report"  # Re-draft (counted separately, no retry limit here)
+    if report_iteration >= MAX_REPORT_RETRIES:
+        return "escalate"
+    return "report_retry"
 
 
 def increment_retry(state: AgentState) -> dict:
     return {"iteration_count": state.get("iteration_count", 0) + 1}
+
+
+def increment_report_retry(state: AgentState) -> dict:
+    return {"report_retry_count": state.get("report_retry_count", 0) + 1}
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +153,7 @@ def build_graph() -> StateGraph:
     g.add_node("analysis", node_analysis)
     g.add_node("sc2_check", node_sc2_check)
     g.add_node("report", node_report)
+    g.add_node("report_retry", lambda s: {**increment_report_retry(s), **node_report(s)})
     g.add_node("sc3_check", node_sc3_check)
     g.add_node("escalate", node_escalate)
 
@@ -169,9 +177,11 @@ def build_graph() -> StateGraph:
         "escalate": "escalate",
     })
     g.add_edge("report", "sc3_check")
+    g.add_edge("report_retry", "sc3_check")
     g.add_conditional_edges("sc3_check", route_after_sc3, {
         END: END,
-        "report": "report",
+        "report_retry": "report_retry",
+        "escalate": "escalate",
     })
     g.add_edge("escalate", END)
 

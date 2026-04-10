@@ -1,7 +1,7 @@
 """WebSearch Agent — Task T2 (parallel with Retrieve).
 
 Sources:
-- Tavily: multi-angle web search (news, blog, IR, hiring signals)
+- Exa: multi-angle web search (news, blog, IR, hiring signals)
 - OpenAlex: academic paper search (https://api.openalex.org/works)
 
 Outcome: evidence_store populated with metadata-tagged snippets from both sources.
@@ -13,7 +13,7 @@ from collections import Counter
 from datetime import date
 
 import requests
-from tavily import TavilyClient
+from exa_py import Exa
 
 from rd_strategy_agent.state import AgentState, EvidenceItem
 
@@ -42,11 +42,24 @@ def _build_queries(technologies: list[str], competitors: list[str], keywords: li
     return queries
 
 
-def _tag_metadata(snippet: str, title: str, technologies: list[str], competitors: list[str]) -> tuple[list[str], list[str]]:
+def _tag_metadata(
+    snippet: str, title: str, technologies: list[str], competitors: list[str]
+) -> tuple[list[str], list[str], str]:
     text = (snippet + " " + title).lower()
     kws = [t for t in technologies if t.lower() in text]
     entities = [c for c in competitors if c.lower() in text]
-    return kws, entities
+    tagging_status = "ok" if kws or entities else "tagging_unavailable"
+    return kws, entities, tagging_status
+
+
+def _get_result_field(result: object, field: str, default: str = "") -> str:
+    if isinstance(result, dict):
+        value = result.get(field, default)
+    else:
+        value = getattr(result, field, default)
+    if isinstance(value, list):
+        return "\n".join(str(item) for item in value if item)
+    return value or default
 
 
 # ---------------------------------------------------------------------------
@@ -110,7 +123,7 @@ def _search_openalex(technologies: list[str], keywords: list[str], competitors: 
             pub_date = work.get("publication_date") or ""
             abstract = _reconstruct_abstract(work.get("abstract_inverted_index"))
             snippet = abstract if abstract else title
-            kws, entities = _tag_metadata(snippet, title, technologies, competitors)
+            kws, entities, tagging_status = _tag_metadata(snippet, title, technologies, competitors)
             results.append(
                 EvidenceItem(
                     url=url,
@@ -120,6 +133,7 @@ def _search_openalex(technologies: list[str], keywords: list[str], competitors: 
                     domain="openalex.org",
                     keywords=kws,
                     entities=entities,
+                    tagging_status=tagging_status,
                 )
             )
 
@@ -131,7 +145,7 @@ def _search_openalex(technologies: list[str], keywords: list[str], competitors: 
 # ---------------------------------------------------------------------------
 
 def websearch_agent(state: AgentState) -> dict:
-    """T2: Multi-angle web search (Tavily) + academic paper search (OpenAlex)."""
+    """T2: Multi-angle web search (Exa) + academic paper search (OpenAlex)."""
     scope = state["scope"]
     technologies = scope.get("technologies", [])
     competitors = scope.get("competitors", [])
@@ -140,39 +154,40 @@ def websearch_agent(state: AgentState) -> dict:
     new_evidence: list[EvidenceItem] = []
     seen_urls: set[str] = {ev["url"] for ev in state.get("evidence_store", [])}
 
-    # --- Tavily ---
-    client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+    # --- Exa ---
+    client = Exa(api_key=os.environ["EXA_API_KEY"])
     queries = _build_queries(technologies, competitors, keywords)
     for query in queries:
         try:
-            results = client.search(
-                query=query,
-                search_depth="advanced",
-                max_results=5,
-                include_raw_content=False,
+            results = client.search_and_contents(
+                query,
+                type="auto",
+                text={"max_characters": 4000},
+                num_results=5,
             )
-            for r in results.get("results", []):
-                url = r.get("url", "")
+            for r in getattr(results, "results", []):
+                url = _get_result_field(r, "url")
                 if url in seen_urls:
                     continue
                 seen_urls.add(url)
-                snippet = r.get("content", "")
-                title = r.get("title", "")
+                snippet = _get_result_field(r, "text") or _get_result_field(r, "highlights")
+                title = _get_result_field(r, "title")
                 domain = url.split("/")[2] if url.startswith("http") else ""
-                kws, entities = _tag_metadata(snippet, title, technologies, competitors)
+                kws, entities, tagging_status = _tag_metadata(snippet, title, technologies, competitors)
                 new_evidence.append(
                     EvidenceItem(
                         url=url,
                         title=title,
-                        date=r.get("published_date", ""),
+                        date=_get_result_field(r, "published_date"),
                         snippet=snippet,
                         domain=domain,
                         keywords=kws,
                         entities=entities,
+                        tagging_status=tagging_status,
                     )
                 )
         except Exception as e:
-            print(f"[WebSearch/Tavily] query failed: {query!r} — {e}")
+            print(f"[WebSearch/Exa] query failed: {query!r} — {e}")
 
     # --- OpenAlex ---
     openalex_results = _search_openalex(technologies, keywords, competitors)

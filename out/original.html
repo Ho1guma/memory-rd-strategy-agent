@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>AI Agent Mini Project &mdash; &#xacc4;&#xd68d;&#xc11c;</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="ai-agent-mini-project--계획서">AI Agent Mini Project — 계획서</h1>
+<h2 id="1-프로젝트-개요">1. 프로젝트 개요</h2>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>주제</strong></td>
+<td>HBM4, PIM(Processing-in-Memory), CXL 등 최신 반도체 R&amp;D 정보 수집·분석</td>
+</tr>
+<tr>
+<td><strong>분석</strong></td>
+<td>경쟁사별 기술 성숙도·위협 수준 비교</td>
+</tr>
+<tr>
+<td><strong>산출물</strong></td>
+<td>R&amp;D 담당자가 즉시 활용 가능한 <strong>기술 전략 분석 보고서</strong> (구조화된 문서)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="2-a-설계--agentic-workflow">2. A. 설계 — Agentic Workflow</h2>
+<h3 id="21-supervisor-역할">2.1 Supervisor 역할</h3>
+<ul>
+<li><strong>Supervisor 에이전트</strong>: 목표·성공 기준·계획 승인, 하위 에이전트 조율, 품질 게이트(재시도·분기), 최종 보고서 구조·톤 검수.</li>
+<li><strong>실행 에이전트</strong>: 검색·추출·비교·초안 작성 등 <strong>Outcome 단위</strong>로 위임; Supervisor는 “무엇을 완료해야 다음 단계로 갈 수 있는가”만 판단.</li>
+</ul>
+<h3 id="22-goal">2.2 Goal</h3>
+<table>
+<thead>
+<tr>
+<th>Goal ID</th>
+<th>Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G1</td>
+<td>분석 대상 기술(HBM4/PIM/CXL)에 대해 <strong>의사결정에 쓰일 수 있는</strong> 최신 공개 정보가 체계적으로 수집·정리된 상태</td>
+</tr>
+<tr>
+<td>G2</td>
+<td>경쟁사별로 <strong>TRL 추정·위협 수준</strong>이 동일한 기준으로 비교 가능한 형태로 정리된 상태</td>
+</tr>
+<tr>
+<td>G3</td>
+<td>위 정보를 바탕으로 <strong>우선순위·대응 방향</strong>을 논의할 수 있는 <strong>기술 전략 분석 보고서</strong>가 완성된 상태</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-success-criteria">2.3 Success Criteria</h3>
+<p>각 기준은 <strong>대상 / 변화 / 결정·행동 / 범위</strong>를 명시한다.<br>
+각 SC는 아래 품질 프레임워크 3축을 기준으로 설계한다.</p>
+<ul>
+<li><strong>결과 품질 (Quality)</strong>: 근거성(출처) · 완결성(누락 없음) · 일관성(내부 모순 없음) — TOOL로 자동 검증</li>
+<li><strong>업무적 제약 (Constraints)</strong>: Target Actor · Compliance · Scope Boundaries · Formatting</li>
+<li><strong>서비스 기준 (Operational)</strong>: Error Handling(Reflection) · Consistency · Stability — LOOP·Reflection 패턴으로 대응</li>
+</ul>
+<h4 id="g1-관련">G1 관련</h4>
+<table>
+<thead>
+<tr>
+<th>기준 ID</th>
+<th>대상</th>
+<th>변화</th>
+<th>결정·행동</th>
+<th>범위(포함/제외)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SC1-1</td>
+<td>HBM4, PIM, CXL 각각</td>
+<td>출처·날짜가 붙은 요약 카드 ≥ N건(기술당 5건 이상); 근거 없는 스니펫 포함 불가 <strong>(근거성)</strong></td>
+<td>기술 현황 섹션 작성 시 근거로 인용 가능</td>
+<td>포함: 논문·학회·특허·공식 보도·IR; 제외: 익명 커뮤니티 단독 주장</td>
+</tr>
+<tr>
+<td>SC1-2</td>
+<td>수집 문서 메타데이터</td>
+<td><code>keywords</code>, <code>entities</code> 필드 존재 여부로 자동 판정; 추출 불가 문서는 “태깅 불가” 표기 <strong>(Reflection)</strong></td>
+<td>검색·재랭킹·중복 제거에 사용</td>
+<td>포함: 모든 수집 스니펫; 제외: 텍스트 추출 불가 문서(이미지 전용 PDF 등)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="g2-관련">G2 관련</h4>
+<table>
+<thead>
+<tr>
+<th>기준 ID</th>
+<th>대상</th>
+<th>변화</th>
+<th>결정·행동</th>
+<th>범위</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SC2-1</td>
+<td>사전 정의 경쟁사×기술 전체 조합</td>
+<td>모든 조합에 TRL 구간 + 근거 ≥ 2개; 근거 부족 시 “정보 부족” 명시 <strong>(완결성·근거성·Reflection)</strong></td>
+<td>경쟁사 비교 표·서술에 사용</td>
+<td>TRL 4–6은 “추정” 라벨 및 간접 지표 명시; 근거 없으면 “정보 부족” 표기</td>
+</tr>
+<tr>
+<td>SC2-2</td>
+<td>동일 조합 전체</td>
+<td>위협 수준(낮음/중간/높음) + TRL값과 모순 없는 판정 규칙 <strong>(완결성·일관성)</strong></td>
+<td>전략 시사점 우선순위 논의</td>
+<td>규칙은 README에 고정; TRL ≥ 7 → 높음, 5–6 → 중간, ≤ 4 → 낮음 (투자·채용 추세로 1단계 상향 가능)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>일관성 판정</strong>: SC2-2의 위협 등급은 SC2-1의 TRL 수치와 교차 검증하여 모순 시 Supervisor가 Analysis 재실행 지시.</p>
+</blockquote>
+<h4 id="g3-관련">G3 관련</h4>
+<table>
+<thead>
+<tr>
+<th>기준 ID</th>
+<th>대상</th>
+<th>변화</th>
+<th>결정·행동</th>
+<th>범위</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SC3-1</td>
+<td>최종 보고서</td>
+<td>SUMMARY 400자 이내 + 4절 목차 + REFERENCE; 모든 주장에 본문 [N] 인용 존재 <strong>(근거성·완결성)</strong>; TRL 4–6 구간 “추정” 한계 고지 필수 <strong>(Compliance)</strong>; 독자(R&amp;D 담당자) 기준 객관·간결 톤 <strong>(Target Actor)</strong></td>
+<td>R&amp;D 리뷰 미팅 자료로 제출</td>
+<td>언어: 한국어(영문 병기); 회사명·단위 표기 통일; 수율·원가 단정 금지</td>
+</tr>
+<tr>
+<td>SC3-2</td>
+<td>REFERENCE</td>
+<td>본문 [N] 인용과 1:1 대응 URL/DOI/제목/접근일; 매핑 불가 인용은 “[매핑 불가]” 명시 <strong>(Reflection)</strong></td>
+<td>출처 검증 가능</td>
+<td>포함: 본문 인용 자료 전체; 제외: 인용 없이 단순 참고한 자료</td>
+</tr>
+<tr>
+<td>SC3-3</td>
+<td>보고서 재실행 안정성</td>
+<td>동일 evidence_store 입력 시 섹션 구조·TRL 구간·위협 등급 변동 없음 (<code>temperature=0</code> 보장) <strong>(Stability·Consistency)</strong></td>
+<td>품질 일관성 유지</td>
+<td>허용: 표현 미세 변동; 불허: 섹션 구조·등급 변경</td>
+</tr>
+</tbody>
+</table>
+<p><em>(N=5, 경쟁사 목록, 위협 등급 규칙은 scope.yaml 및 README에 수치·정의로 고정)</em></p>
+<h3 id="24-plan--task-분해">2.4 Plan — Task 분해</h3>
+<table>
+<thead>
+<tr>
+<th>Task ID</th>
+<th>Outcome</th>
+<th>Success Criteria 연결</th>
+<th>의존성</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1</td>
+<td>웹/문서에서 근거가 있는 스니펫이 저장·메타데이터화된 상태 (scope.yaml은 실행 전 수동 설정)</td>
+<td>SC1-1, SC1-2</td>
+<td>—</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>로컬/인덱스 기반 검색으로 질의별 관련 청크가 반환되는 상태; <strong>임베딩·Retrieval 선정 평가(Hit Rate@K/MRR)는 T2 없이는 수행 불가하므로 사실상 필수</strong></td>
+<td>SC1-2, Hit Rate@K/MRR</td>
+<td>T1</td>
+</tr>
+<tr>
+<td>T3</td>
+<td>기술별·회사별 TRL 추정표(추정 구간 명시) 초안</td>
+<td>SC2-1</td>
+<td>T1</td>
+</tr>
+<tr>
+<td>T4</td>
+<td>위협 수준 매트릭스 초안</td>
+<td>SC2-2</td>
+<td>T3</td>
+</tr>
+<tr>
+<td>T5</td>
+<td>보고서 목차에 맞춘 통합 초안</td>
+<td>SC3-1</td>
+<td>T3, T4</td>
+</tr>
+<tr>
+<td>T6</td>
+<td>REFERENCE 정합성·SUMMARY 압축; 동일 입력 재실행 시 섹션 구조·등급 변동 없음 확인</td>
+<td>SC3-1, SC3-2, SC3-3</td>
+<td>T5</td>
+</tr>
+</tbody>
+</table>
+<h3 id="25-control-strategy">2.5 Control Strategy</h3>
+<table>
+<thead>
+<tr>
+<th>구간</th>
+<th>전략</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>실행 전</td>
+<td><strong>수동 설정</strong></td>
+<td><code>scope.yaml</code>에서 technologies, competitors, keywords, n_evidence_min 설정; 범위 과대(경쟁사 &gt; 5개 또는 기술 &gt; 3개) 시 <code>app.py</code>가 자동 축소</td>
+</tr>
+<tr>
+<td>T1–T2</td>
+<td><strong>Loop + Retry (최대 3회)</strong></td>
+<td>SC1-1 미달(출처 N건 미충족) 또는 중복률 &gt; 50% 시 쿼리 재작성 후 재검색; 3회 초과 시 <strong>Escalation</strong></td>
+</tr>
+<tr>
+<td>Escalation</td>
+<td><strong>Abort + 인간 개입 요청</strong></td>
+<td>최대 재시도 후 SC 미달 시 수집된 증거와 함께 진행 불가 사유를 Supervisor가 출력하고 중단</td>
+</tr>
+<tr>
+<td>TRL·위협</td>
+<td><strong>Human-in-the-loop (선택)</strong></td>
+<td>Supervisor가 SC2-1 근거 인용 수 &lt; 2개인 경쟁사를 감지하면 T2로 회귀 (재시도 카운터에 합산)</td>
+</tr>
+<tr>
+<td>최종</td>
+<td><strong>Linear</strong></td>
+<td>T6 → T7 순차 확정</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Supervisor SC 판정 메커니즘</strong>: Supervisor는 LLM 판단이 아닌 <strong>계측 가능한 수치</strong>를 우선 사용한다.</p>
+<ul>
+<li>SC1-1: <code>evidence_store</code>의 출처별 레코드 수 카운트 ≥ N (자동 판정)</li>
+<li>SC1-2: 메타데이터 내 <code>keywords</code>, <code>entities</code> 필드 존재 여부 (자동 판정)</li>
+<li>SC2-1: TRL 표 내 각 경쟁사 행의 <code>evidence_count</code> ≥ 2 (자동 판정)</li>
+<li>SC2-2: 위협 매트릭스 내 판정 규칙 필드 존재 여부 (자동 판정)</li>
+<li>SC3-1/SC3-2: 목차 섹션 존재 + REFERENCE ↔ 본문 인용 매핑 검증 (자동 판정)</li>
+<li><strong>수치 판정 통과 후</strong> 품질 검수(톤·논리) 단계에만 LLM 평가 사용</li>
+</ul>
+<h3 id="26-구조-고수준">2.6 구조 (고수준)</h3>
+<pre><code>[scope.yaml 수동 설정] → app.py 로드 → [Supervisor] ← 모든 에이전트가 결과를 반환하는 허브
+                                             │
+                    ├─► Retrieve Agent → chunks + 메타데이터 반환 → Supervisor
+                    ├─► WebSearch Agent→ Tavily 결과 반환 → Supervisor
+                    │       ↑ SC1 미달 시 Supervisor가 재지시 (최대 3회)
+                    │       ↑ 3회 초과 시 Supervisor → Escalate
+                    │
+                    ├─► Analysis Agent → TRL 표 + 위협 매트릭스 반환 → Supervisor
+                    │       ↑ SC2 미달 시 Supervisor가 Retrieve/WebSearch 재지시
+                    │
+                    ├─► Report Agent   → 초안 + REFERENCE 반환 → Supervisor
+                    │       ↑ SC3 미달 시 Supervisor가 재작성 지시
+                    │
+                    └─► SC 전체 통과 → END
+</code></pre>
+<blockquote>
+<p><strong>Supervisor 패턴 핵심</strong>: 에이전트는 절대 다음 단계로 직접 이동하지 않는다. 반드시 Supervisor에게 결과를 반환하고, Supervisor가 SC 판정 후 다음 행동을 결정한다.</p>
+</blockquote>
+<h3 id="27-retrieve-설계">2.7 Retrieve 설계</h3>
+<h4 id="open-source-embedding-후보군-및-선정-기준">Open-source Embedding 후보군 및 선정 기준</h4>
+<table>
+<thead>
+<tr>
+<th>후보 예시</th>
+<th>특징</th>
+<th>선정 기준</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sentence-transformers</code> 계열 (e.g. multilingual 모델)</td>
+<td>한·영 혼합 문서 적합 가능</td>
+<td>한국어/영어 쿼리 재현율, 라이선스, 추론 비용</td>
+</tr>
+<tr>
+<td>BGE-m3 등 다국어 dense</td>
+<td>긴 문맥·다국어</td>
+<td>동일 + 벡터 차원·메모리</td>
+</tr>
+<tr>
+<td>(선택) Korean-specific 임베딩</td>
+<td>국내 보도 비중이 클 때</td>
+<td>도메인 벤치(소규모 golden set)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>선정 절차</strong>: (1) golden 질의 세트 10–30개 작성 → (2) 후보별 임베딩·검색 파이프라인 동일 조건 비교 → (3) Hit Rate@K, MRR 기록 → <strong>최종 모델·버전을 GitHub README에 반영</strong>.</p>
+<h4 id="retrieval-technique-후보군-및-선정-기준">Retrieval technique 후보군 및 선정 기준</h4>
+<table>
+<thead>
+<tr>
+<th>후보</th>
+<th>설명</th>
+<th>선정 기준</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dense (vector)</td>
+<td>임베딩 유사도</td>
+<td>의미적 매칭, 동의어</td>
+</tr>
+<tr>
+<td>BM25 / 키워드</td>
+<td>어휘 일치</td>
+<td>제품명·표준명 정확도</td>
+</tr>
+<tr>
+<td>Hybrid (dense + BM25, RRF 등)</td>
+<td>결합</td>
+<td>종합 Hit Rate@K, MRR</td>
+</tr>
+<tr>
+<td>(선택) Re-ranking cross-encoder</td>
+<td>상위 K 재정렬</td>
+<td>정확도 vs 지연</td>
+</tr>
+</tbody>
+</table>
+<p><strong>성능 기록</strong>: 개발 완료 후 README에 <strong>Hit Rate@K</strong>, <strong>MRR</strong> 및 평가 세트 요약(질의 수, K값) 명시.</p>
+<h3 id="28-web-search-tavily--확증-편향-완화">2.8 Web Search (Tavily) — 확증 편향 완화</h3>
+<ul>
+<li>
+<p><strong>다각도 쿼리</strong>: 동일 주제에 대해 아래 쿼리 유형을 병렬 실행.</p>
+<table>
+<thead>
+<tr>
+<th>유형</th>
+<th>쿼리 템플릿 예시</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>현황</td>
+<td><code>”{기술명} latest development {연도}”</code></td>
+</tr>
+<tr>
+<td>한계·비판</td>
+<td><code>”{기술명} limitations challenges”</code></td>
+</tr>
+<tr>
+<td>경쟁·대안</td>
+<td><code>”{기술명} vs {대안기술} comparison”</code></td>
+</tr>
+<tr>
+<td>채용·투자 신호</td>
+<td><code>”{기업명} {기술명} hiring investment”</code></td>
+</tr>
+<tr>
+<td>반증</td>
+<td><code>”{기술명} failed abandoned setback”</code></td>
+</tr>
+</tbody>
+</table>
+</li>
+<li>
+<p><strong>출처 다양성</strong>: 단일 도메인 출처가 전체 인용의 40% 초과 시 Supervisor가 T2 재실행 트리거.</p>
+</li>
+<li>
+<p><strong>Tavily</strong>: API 기반 웹 검색 도구로 구현; 검색 결과는 <code>{url, title, date, snippet, domain}</code> 메타데이터와 함께 <code>evidence_store</code>에 저장.</p>
+</li>
+</ul>
+<hr>
+<h2 id="3-b-기술-전략-분석-보고서">3. B. 기술 전략 분석 보고서</h2>
+<h3 id="31-목차-상세">3.1 목차 (상세)</h3>
+<ol>
+<li><strong>SUMMARY</strong></li>
+</ol>
+<ul>
+<li>보고서 전체 핵심 요약 (1/2페이지 이내)</li>
+</ul>
+<ol start="2">
+<li><strong>1. 분석 배경</strong></li>
+</ol>
+<ul>
+<li>왜 지금 이 기술을 분석해야 하는가 (시장·공급망·표준·정책 등)</li>
+</ul>
+<ol start="3">
+<li><strong>2. 분석 대상 기술 현황</strong></li>
+</ol>
+<ul>
+<li>HBM4 / PIM / CXL 각각: 현재 기술 수준, 개발 방향, 주요 병목</li>
+</ul>
+<ol start="4">
+<li><strong>3. 경쟁사 동향 분석</strong></li>
+</ol>
+<ul>
+<li>경쟁사별 기술 전략, 최신 움직임, TRL·위협 요약 표</li>
+</ul>
+<ol start="5">
+<li><strong>4. 전략적 시사점</strong></li>
+</ol>
+<ul>
+<li>R&amp;D 우선순위 관점 대응 방향 제언 (단기/중기 구분 가능)</li>
+</ul>
+<ol start="6">
+<li><strong>REFERENCE</strong></li>
+</ol>
+<ul>
+<li>본문 인용과 대응하는 자료 목록 (URL/DOI/제목/접근일)</li>
+</ul>
+<h3 id="32-전략-비교--trl-기반">3.2 전략 비교 — TRL 기반</h3>
+<ul>
+<li><strong>TRL 1–9</strong> 정의는 가이드와 동일하게 보고서 부속 또는 본문에 요약 인용.</li>
+<li><strong>공개 정보 기반 추정</strong>
+<ul>
+<li>TRL 1–3: 논문·학회·특허 중심 근거.</li>
+<li>TRL 4–6: <strong>정보 갭 큼</strong> → 수치 단정 금지, “추정” 및 간접 지표(특허 출원 패턴, 학회 발표 빈도 변화, 채용 키워드 등) 명시.</li>
+<li>TRL 7–9: 양산·실적·샘플 공급 등 공개 자료 위주, 단 수율·원가는 비공개 전제 명시.</li>
+</ul>
+</li>
+<li><strong>한계 고지</strong>: 에이전트 성능과 무관하게 TRL 4–6은 추정 영역임을 보고서 본문에 <strong>명시적으로</strong> 기술.</li>
+</ul>
+<h3 id="33-swot-vs-trl">3.3 SWOT vs TRL</h3>
+<ul>
+<li>SWOT는 상대·주관적 비교에 유리.</li>
+<li>TRL은 “현재 단계” 절대 위치 제공; 보고서에서는 <strong>TRL을 주축</strong>으로 표를 만들고, 필요 시 SWOT는 보조 섹션으로 제한.</li>
+</ul>
+<hr>
+<h2 id="4-설계-산출물-자유-양식-정리">4. 설계 산출물 (자유 양식 정리)</h2>
+<h3 id="41-workflow-요약">4.1 Workflow 요약</h3>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Goal</strong></td>
+<td>G1–G3 (Outcome)</td>
+</tr>
+<tr>
+<td><strong>Success Criteria</strong></td>
+<td>SC1-* ~ SC3-* (판정 가능)</td>
+</tr>
+<tr>
+<td><strong>Task</strong></td>
+<td>T1–T7 (Outcome 단위, SC 연결)</td>
+</tr>
+<tr>
+<td><strong>Control Strategy</strong></td>
+<td>분기·루프·재시도·(선택) HITL</td>
+</tr>
+<tr>
+<td><strong>Structure</strong></td>
+<td>Supervisor + Retrieve/Web/Analysis/Report</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-workflow--agent-정의-초안">4.2 Workflow → Agent 정의 (초안)</h3>
+<table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>책임</th>
+<th>주요 State 입력</th>
+<th>주요 State 출력</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Supervisor</strong></td>
+<td>분기·승인·품질</td>
+<td>현재 단계, SC 달성 여부</td>
+<td>다음 Task, 재시도 플래그</td>
+</tr>
+<tr>
+<td><strong>Retrieve</strong></td>
+<td>T1, T2</td>
+<td>쿼리, 인덱스</td>
+<td><code>chunks[]</code> + 메타데이터</td>
+</tr>
+<tr>
+<td><strong>WebSearch</strong></td>
+<td>T1 (병렬)</td>
+<td>쿼리 세트</td>
+<td>Tavily 결과 정규화</td>
+</tr>
+<tr>
+<td><strong>Analysis</strong></td>
+<td>T3, T4</td>
+<td>근거 풀</td>
+<td>TRL 표, 위협 매트릭스</td>
+</tr>
+<tr>
+<td><strong>Report</strong></td>
+<td>T5, T6</td>
+<td>분석 산출</td>
+<td>최종 Markdown</td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-state--graph-흐름-개념">4.3 State · Graph 흐름 (개념)</h3>
+<ul>
+<li>
+<p><strong>State 필드 정의</strong></p>
+<table>
+<thead>
+<tr>
+<th>필드</th>
+<th>타입</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>scope</code></td>
+<td>object</td>
+<td>scope.yaml 로드값 (technologies, competitors, keywords, n_evidence_min)</td>
+</tr>
+<tr>
+<td><code>evidence_store</code></td>
+<td>list[dict]</td>
+<td>수집 스니펫 (url, title, date, snippet, domain, keywords, entities)</td>
+</tr>
+<tr>
+<td><code>iteration_count</code></td>
+<td>int</td>
+<td>현재 T1 재시도 횟수 (최대 3)</td>
+</tr>
+<tr>
+<td><code>sc_status</code></td>
+<td>dict</td>
+<td>SC별 자동 판정 결과 (SC1-1 ~ SC3-2 → pass/fail/count)</td>
+</tr>
+<tr>
+<td><code>trl_table</code></td>
+<td>list[dict]</td>
+<td>경쟁사별 TRL 추정 (company, technology, trl_range, evidence_count, label)</td>
+</tr>
+<tr>
+<td><code>threat_matrix</code></td>
+<td>list[dict]</td>
+<td>경쟁사별 위협 등급 (company, level, rationale)</td>
+</tr>
+<tr>
+<td><code>draft_report</code></td>
+<td>str</td>
+<td>보고서 Markdown 초안</td>
+</tr>
+<tr>
+<td><code>reference_list</code></td>
+<td>list[dict]</td>
+<td>본문 인용 ↔ 출처 매핑 (citation_id, url, title, accessed_date)</td>
+</tr>
+<tr>
+<td><code>last_error</code></td>
+<td>str</td>
+<td>null</td>
+</tr>
+</tbody>
+</table>
+</li>
+<li>
+<p><strong>Graph (LangGraph)</strong></p>
+<pre><code class="language-text">scope.yaml 로드 (app.py) → Supervisor
+
+Supervisor → Retrieve Agent      : T1 문서 검색 지시
+Supervisor → WebSearch Agent     : T1 웹 검색 지시
+Retrieve Agent → Supervisor      : chunks + 메타데이터 반환
+WebSearch Agent → Supervisor     : Tavily 결과 반환
+
+# SC1 판정 (evidence_store count ≥ N?)
+Supervisor → Retrieve Agent      : SC1 미달 · 쿼리 재작성 후 재시도 (iteration_count &lt; 3)
+Supervisor → WebSearch Agent     : SC1 미달 · 쿼리 재작성 후 재시도 (iteration_count &lt; 3)
+Supervisor → Escalate            : retry 3회 초과 → 진행 불가 사유 출력 후 END
+
+Supervisor → Analysis Agent      : T3-4 TRL · 위협 분석 지시
+Analysis Agent → Supervisor      : TRL 추정표 · 위협 매트릭스 반환
+
+# SC2 판정 (evidence_count ≥ 2 per company?)
+Supervisor → Retrieve Agent      : SC2 미달 · 증거 보강 요청
+
+Supervisor → Report Agent        : T5-6 보고서 작성 지시
+Report Agent → Supervisor        : 초안 · REFERENCE 반환
+
+# SC3 판정 (목차 완성 + 인용 매핑 OK?)
+Supervisor → Report Agent        : SC3 미달 · 재작성 요청
+Supervisor → END                 : SC 전체 통과
+</code></pre>
+</li>
+</ul>
+<hr>
+<h2 id="5-개발운영-계획-uv-기준">5. 개발·운영 계획 (uv 기준)</h2>
+<ol>
+<li><code>uv init</code> / <code>uv venv --python 3.11</code>로 프로젝트·가상환경 생성 (Python ≥ 3.11 필요).</li>
+<li>의존성: LLM SDK, (선택) LangGraph/LangChain, Tavily 클라이언트, 임베딩·벡터스토어 라이브러리 등 <code>pyproject.toml</code>에 명시.</li>
+<li><code>.env</code>에 API 키(Tavily 등); 샘플은 <code>.env.example</code>만 커밋.</li>
+<li><strong>평가 자산</strong>: golden 질의, relevance 판정 규칙, Hit Rate@K/MRR 스크립트 → <code>eval/</code> 또는 <code>tests/</code>에 배치.</li>
+<li><strong>README</strong>: 워크플로 요약, 최종 임베딩·Retrieval 선택 근거, <strong>Hit Rate@K·MRR</strong> 수치, 보고서 생성 방법.</li>
+</ol>
+<hr>
+<h2 id="6-프롬프트-품질-기준">6. 프롬프트 품질 기준</h2>
+<p>LLM 호출 시 아래 3가지 기준을 Analysis·Report 에이전트 프롬프트에 명시적으로 반영한다.</p>
+<h3 id="61-결과-품질-기준-quality">6.1 결과 품질 기준 (Quality)</h3>
+<table>
+<thead>
+<tr>
+<th>기준</th>
+<th>정의</th>
+<th>구현</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>근거성</strong></td>
+<td>주장마다 근거가 있는가 (출처)</td>
+<td>증거 자료에 없는 내용 창작 금지 명시; <code>evidence_refs</code>는 실제 URL만 허용; 근거 없으면 &quot;정보 부족&quot; 표기 강제</td>
+</tr>
+<tr>
+<td><strong>완결성</strong></td>
+<td>필수 항목을 빠짐없이 포함했는가</td>
+<td>경쟁사×기술 전체 조합(N개) 커버 요구; 위협 매트릭스 모든 경쟁사 행 생성 강제</td>
+</tr>
+<tr>
+<td><strong>일관성</strong></td>
+<td>내부 모순이 없는가</td>
+<td>위협 등급이 TRL 수치와 모순되지 않도록 프롬프트에 교차 검증 규칙 명시</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-업무적-제약-조건-constraints">6.2 업무적 제약 조건 (Constraints)</h3>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Target Actor</strong></td>
+<td>독자: 반도체 R&amp;D 담당자·기술 전략 임원 (고급 전문가); 톤: 객관·간결·논거 중심; SUMMARY 400자 이내</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>TRL 4–6 &quot;추정&quot; 명시 필수; 수율·원가 단정 금지; 증거 없는 수치 생성 금지; 매핑 불가 인용 <code>[매핑 불가]</code> 명시적 표기</td>
+</tr>
+<tr>
+<td><strong>Scope Boundaries</strong></td>
+<td>scope.yaml 기준 포함/제외 범위 고정</td>
+</tr>
+<tr>
+<td><strong>Formatting</strong></td>
+<td>TRL·위협 출력은 JSON 배열; 보고서는 Markdown; 회사명·기술 용어 표기 통일</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63-서비스-기준-operational">6.3 서비스 기준 (Operational)</h3>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Error Handling</strong></td>
+<td>JSON 파싱·필드 검증 실패 시 피드백 포함 최대 2회 재요청 (<code>_llm_call_with_retry</code>); LLM API 오류 try/except 처리 후 <code>last_error</code> 전달</td>
+</tr>
+<tr>
+<td><strong>Consistency</strong></td>
+<td><code>temperature=0</code> 고정; 필수 필드 검증 (<code>_validate_trl_row</code>, <code>_validate_threat_row</code>)</td>
+</tr>
+<tr>
+<td><strong>Stability</strong></td>
+<td>evidence_store 비어있을 때 빈 결과 반환 + 경고 출력으로 그래프 중단 방지</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="7-리스크완화">7. 리스크·완화</h2>
+<table>
+<thead>
+<tr>
+<th>리스크</th>
+<th>완화</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TRL 4–6 과신 서술</td>
+<td>추정 라벨·간접 지표·한계 절 필수; Compliance 규칙으로 프롬프트에 명시</td>
+</tr>
+<tr>
+<td>확증 편향</td>
+<td>Tavily 다각도·반증 쿼리·출처 다양성 규칙</td>
+</tr>
+<tr>
+<td>환각 인용</td>
+<td>REFERENCE와 본문 교차 검증; 매핑 불가 인용 자동 감지·표기; 원문 스니펫 보관</td>
+</tr>
+<tr>
+<td>범위 폭발</td>
+<td>T1에서 경쟁사·기술 수 상한 및 SC1-1 최소 건수만 조정</td>
+</tr>
+<tr>
+<td>JSON 파싱 실패</td>
+<td><code>_llm_call_with_retry</code> 재시도 + 필드 검증으로 빈 결과 방지</td>
+</tr>
+<tr>
+<td>LLM API 오류</td>
+<td>try/except → <code>last_error</code> 기록 → Supervisor 에스컬레이션</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>본 문서는 Mini Project 가이드에 따른 계획서이며, 구현 세부사항은 리포지토리 README 및 코드와 동기화하여 갱신한다.</em></p>
+
+            
+            
+        </body>
+        </html>
