@@ -1,11 +1,15 @@
 """
-LLM 기반 품질 검수 모듈
+LLM 기반 품질 검수 모듈 (Phase 2)
 
-Supervisor의 수치·구조 판정(Phase 1) 통과 후 호출되는 2차 품질 게이트(Phase 2).
-- 환각 탐지: 증거에 없는 사실 주장 감지
-- 인용 정확성: [N] 인용과 실제 증거 내용 대조
-- Compliance: TRL 4-6 "추정" 명시, 수율·원가 단정 금지
-- 톤: R&D 임원 대상 객관·간결 톤 준수
+Phase 1에서 규칙 기반으로 처리되는 항목:
+- 섹션 구조, REFERENCE 완결성, SUMMARY 길이, 수율/원가 금지, 인용 범위, 추정 라벨 compliance
+
+Phase 2 (이 모듈)에서 처리하는 항목 — 규칙으로 잡기 어려운 것만:
+- 환각 탐지: 증거에도 TRL 추정표에도 없는 구체적 수치/날짜/사건을 지어낸 경우
+- 인용 정확성: [N] 인용이 해당 증거와 완전히 무관한 경우
+- 톤: 과장·마케팅 문구 (warning만, fail 아님)
+
+compliance는 Phase 1에서 규칙으로 처리하므로 Phase 2에서 다루지 않음.
 """
 
 import json
@@ -18,58 +22,56 @@ from langchain_core.messages import HumanMessage
 
 LLM_MODEL = os.environ.get("LLM_MODEL", "gpt-4o-mini")
 
-REPORT_REVIEW_PROMPT = """당신은 반도체 R&D 기술 전략 보고서의 품질 감사관(Quality Auditor)입니다.
-아래 보고서 초안을 증거 자료와 대조하여 품질을 평가하세요.
+REPORT_REVIEW_PROMPT = """당신은 반도체 R&D 기술 전략 보고서의 품질 감사관입니다.
+아래 보고서 초안에서 명백한 환각(날조)과 인용 오류만 검출하세요.
 
-**평가 기준**
+**역할 범위 - 아래 항목만 검토하세요**
 
-1. **환각 탐지 (Hallucination)**
-   - 보고서의 모든 사실적 주장(수치·날짜·사건·인물)이 아래 증거 자료에 근거하는지 확인
-   - 증거에 없는 구체적 수치, 날짜, 사건을 지어낸 경우 → severity "critical"
-   - 증거를 과도하게 확대 해석하거나 인과관계를 임의 추가한 경우 → severity "warning"
+1. **환각 탐지 (Hallucination)** — 매우 보수적으로 판단
+   - 증거 자료에도 TRL 추정표에도 없는 구체적 수치(예: 정확한 매출액, 특정 %수치, 정확한 출시일)를 명백히 지어낸 경우에만 -> "critical"
+   - 일반적 기술 동향 서술(예: "AI 수요 증가")은 환각 아님 -> 판단 대상 아님
+   - SK Hynix 자사 TRL 서술(2절)은 경쟁사 추정표와 무관하므로 절대 환각 판단 대상 아님
 
 2. **인용 정확성 (Citation Accuracy)**
-   - 본문의 [N] 인용 번호 주변 텍스트가 실제 증거 [N]의 내용과 일치하는지 확인
-   - 인용 번호와 내용이 명백히 불일치하면 → "critical"
+   - [N] 인용 주변 내용이 해당 증거와 완전히 무관한 경우에만 -> "critical"
+   - 부분적으로 관련 있으면 -> "warning"
 
-3. **Compliance**
-   - TRL 4-6 구간에 "추정" 또는 그에 준하는 한계 고지가 있는지 확인
-   - 수율·원가를 단정적으로 서술한 경우 → "critical"
-   - 비공개 로드맵 내용을 사실처럼 서술한 경우 → "critical"
+3. **톤 (Tone)**
+   - 감탄사, 과장, 마케팅 문구 -> "warning"만 (절대 critical 아님)
 
-4. **톤·표현 (Tone)**
-   - R&D 임원 대상: 객관적·간결·논거 중심이어야 함
-   - 감탄사("놀랍게도"), 과장("혁명적"), 마케팅 문구 사용 시 → "warning"
+**검토 대상이 아닌 항목 (판단하지 마세요)**
+- compliance (추정 라벨 사용 여부): Phase 1에서 규칙으로 처리됨
+- 섹션 구조: Phase 1에서 처리됨
+- SK Hynix TRL vs 경쟁사 TRL 비교: 완전히 다른 개체이므로 비교 불가
 
 **보고서에서 인용된 증거 자료**
 {cited_evidence}
 
-**TRL 추정표**
+**TRL 추정표 (경쟁사 전용 데이터 — SK Hynix 없음)**
 {trl_table}
-
-**위협 매트릭스**
-{threat_matrix}
 
 **보고서 초안**
 {draft_report}
 
-**출력 — 아래 JSON만 출력하세요 (마크다운 코드블록·설명 텍스트 없이)**
+**출력 — JSON만 출력 (마크다운 코드블록 없이)**
 {{
   "pass": true 또는 false,
   "issues": [
     {{
-      "criterion": "hallucination 또는 citation_accuracy 또는 compliance 또는 tone",
+      "criterion": "hallucination 또는 citation_accuracy 또는 tone",
       "severity": "critical 또는 warning",
-      "location": "해당 섹션명 또는 문장 발췌",
-      "detail": "구체적 문제 설명"
+      "location": "해당 섹션 또는 문장",
+      "detail": "문제 설명"
     }}
   ],
-  "feedback": "보고서 재작성 시 반드시 수정해야 할 사항 요약 (1-2문단)"
+  "feedback": "수정 필요 사항 (없으면 빈 문자열)"
 }}
 
 **판정 규칙**
-- "critical" 이슈가 1건이라도 있으면 반드시 "pass": false
-- "warning"만 있으면 "pass": true (개선 권고)
+- "warning"만 있으면 반드시 "pass": true
+- "critical"은 명백히 날조된 구체적 수치나 완전 무관 인용에만 사용
+- 확신이 없으면 "warning"으로 처리하거나 이슈 등록 안 함
+- "critical" 이슈가 1건이라도 있어야만 "pass": false
 """
 
 
@@ -100,7 +102,7 @@ def review_report_quality(
     threat_matrix: list,
 ) -> dict:
     """
-    LLM 기반 보고서 품질 검수.
+    LLM 기반 보고서 품질 검수 (Phase 2 — 환각/인용 오류만).
 
     Returns:
         {"pass": bool, "issues": list[dict], "feedback": str}
@@ -124,7 +126,6 @@ def review_report_quality(
     prompt = REPORT_REVIEW_PROMPT.format(
         cited_evidence=_build_cited_evidence(draft_report, evidence_store),
         trl_table=json.dumps(trl_table, ensure_ascii=False, indent=2),
-        threat_matrix=json.dumps(threat_matrix, ensure_ascii=False, indent=2),
         draft_report=draft_report,
     )
 
@@ -135,6 +136,7 @@ def review_report_quality(
         end = text.rfind("}") + 1
         if start != -1 and end > 0:
             result = json.loads(text[start:end])
+            # warning만 있으면 항상 pass
             has_critical = any(
                 issue.get("severity") == "critical"
                 for issue in result.get("issues", [])

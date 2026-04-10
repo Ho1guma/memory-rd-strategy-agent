@@ -11,6 +11,12 @@ class EvidenceItem(TypedDict):
     domain: str
     keywords: list[str]
     entities: list[str]
+    source_type: NotRequired[str]       # "web" | "paper" | "patent" | "local"
+    doi: NotRequired[str]
+    patent_number: NotRequired[str]
+    assignee: NotRequired[str]
+    publication_date: NotRequired[str]
+    query_company: NotRequired[str]     # 이 증거를 수집할 때 사용한 경쟁사 쿼리 (회사명이 본문에 없어도 매핑용)
 
 
 class TRLRow(TypedDict):
@@ -25,6 +31,7 @@ class TRLRow(TypedDict):
 
 class ThreatRow(TypedDict):
     company: str
+    technology: str       # "HBM4" | "PIM" | "CXL" 등
     level: str            # "낮음" | "중간" | "높음"
     rationale: str
 

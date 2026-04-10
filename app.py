@@ -2,7 +2,7 @@
 app.py — Supervisor 패턴 LangGraph 그래프 진입점
 
 흐름:
-  scope.yaml 로드 → [retrieve + web_search] → supervisor_after_retrieve
+  scope.yaml 로드 → [retrieve + web_search + academic_search] → supervisor_after_retrieve
     → analysis → supervisor_after_analysis
     → report → supervisor_after_report
     → end (또는 escalate)
@@ -19,6 +19,7 @@ from langgraph.graph import StateGraph, END
 from agents.state import AgentState
 from agents.retrieve import retrieve_agent
 from agents.web_search import web_search_agent
+from agents.academic_search import academic_search_agent
 from agents.analysis import analysis_agent
 from agents.report import report_agent
 from agents.supervisor import (
@@ -27,6 +28,7 @@ from agents.supervisor import (
     supervisor_after_report,
     escalate,
 )
+import agents.evidence_index as ev_idx
 
 load_dotenv()
 
@@ -52,7 +54,18 @@ def load_scope(scope_path: str = None) -> dict:
 
 # ── 라우팅 함수 ──────────────────────────────────────────────────
 def route_after_retrieve(state: AgentState) -> str:
-    return state.get("next", "retrieve")
+    nxt = state.get("next", "retrieve")
+    # analysis 대신 build_index 경유 (SC1 패스 시)
+    if nxt == "analysis":
+        return "build_index"
+    return nxt
+
+
+def build_index(state: AgentState) -> dict:
+    """evidence_store를 FAISS로 인덱싱 후 analysis로 진행"""
+    evidence_store = state.get("evidence_store", [])
+    ev_idx.build_evidence_index(evidence_store)
+    return {"next": "analysis"}
 
 
 def route_after_analysis(state: AgentState) -> str:
@@ -65,14 +78,24 @@ def route_after_report(state: AgentState) -> str:
     return nxt if nxt != "end" else END
 
 
-# ── 병렬 retrieve + web_search 래퍼 ─────────────────────────────
-def retrieve_and_web_search(state: AgentState) -> dict:
-    """Retrieve + WebSearch를 순차 실행 (결과는 evidence_store에 누적)"""
+# ── retrieve + web_search + academic_search 래퍼 ─────────────────
+def retrieve_all(state: AgentState) -> dict:
+    """Retrieve + WebSearch(Exa) + AcademicSearch(OpenAlex/Lens) 순차 실행"""
     r1 = retrieve_agent(state)
     merged = {**state, "evidence_store": state.get("evidence_store", []) + r1.get("evidence_store", [])}
+
     r2 = web_search_agent(merged)
+    # r2 결과도 merged에 합산하여 academic_search에서 중복 체크 가능하도록
+    merged = {**merged, "evidence_store": merged["evidence_store"] + r2.get("evidence_store", [])}
+
+    r3 = academic_search_agent(merged)
+
     return {
-        "evidence_store": r1.get("evidence_store", []) + r2.get("evidence_store", [])
+        "evidence_store": (
+            r1.get("evidence_store", [])
+            + r2.get("evidence_store", [])
+            + r3.get("evidence_store", [])
+        )
     }
 
 
@@ -81,8 +104,9 @@ def build_graph() -> StateGraph:
     graph = StateGraph(AgentState)
 
     # 노드 등록
-    graph.add_node("retrieve", retrieve_and_web_search)
+    graph.add_node("retrieve", retrieve_all)
     graph.add_node("supervisor_retrieve", supervisor_after_retrieve)
+    graph.add_node("build_index", build_index)
     graph.add_node("analysis", analysis_agent)
     graph.add_node("supervisor_analysis", supervisor_after_analysis)
     graph.add_node("report", report_agent)
@@ -98,10 +122,12 @@ def build_graph() -> StateGraph:
         route_after_retrieve,
         {
             "retrieve": "retrieve",
-            "analysis": "analysis",
+            "build_index": "build_index",
             "escalate": "escalate",
         },
     )
+
+    graph.add_edge("build_index", "analysis")
 
     graph.add_edge("analysis", "supervisor_analysis")
 
