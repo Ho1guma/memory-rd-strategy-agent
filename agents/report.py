@@ -47,13 +47,27 @@ REPORT_PROMPT = """당신은 {self_company} 내부 R&D 전략 담당자입니다
 **[데이터 B] 위협 수준 매트릭스**
 {threat_matrix}
 
-**[데이터 C] 수집 증거 ({evidence_count}건) — 반드시 [N] 형식으로 인용**
+**[데이터 C] 수집 증거 ({evidence_count}건)**
 {evidence_summary}
+
+**=== 인용 규칙 (절대 엄수 — 위반 시 보고서 전면 재작성) ===**
+
+[데이터 C]의 첫 번째 블록(╔══ 확정된 인용 번호 목록 ══╗)에 번호와 제목이 나열되어 있습니다.
+
+**규칙 1 — 번호 출처**: 이 목록에 있는 [N] 번호만 본문에 사용. 목록에 없는 번호 절대 금지.
+  - [데이터 C]에 "[15] Samsung HBM4 article"이 있으면 → 본문에서 반드시 [15]
+  - ❌ 잘못된 예: [1], [2], [3] 순서대로 임의 부여 → 금지
+
+**규칙 2 — 제목 확인 후 인용**: 인용 전에 번호 목록에서 해당 항목의 제목을 확인하고, 본문 맥락과 일치하는 번호만 사용.
+  - ❌ 잘못된 예: Samsung 관련 문장에 SK Hynix 기사 번호를 인용하는 것 → 금지
+
+**규칙 3 — 수치·사실 주장**: 모든 수치·사실 주장에 [N] 인용 필수. 인용 없는 주장 작성 불가.
+
+**규칙 4 — REFERENCE 섹션**: 본문에서 사용한 [N] 번호와 대응하는 제목·URL을 [데이터 C] 목록에서 찾아 작성. 시스템이 이를 검증하여 교체함.
 
 **=== 보고서 작성 지시 ===**
 
 아래 섹션 번호·제목을 정확히 따르고, Markdown 헤딩(`#`, `##`)을 bold(`**`)로 감싸지 마세요.
-모든 사실적 주장에는 [N] 인용을 필수로 달아야 합니다.
 
 ---
 
@@ -71,18 +85,22 @@ REPORT_PROMPT = """당신은 {self_company} 내부 R&D 전략 담당자입니다
 - 시장·기술 변화 핵심 동인 1줄
 
 **최우선 행동 권고안:**
-> {self_company}가 향후 6-12개월 내 반드시 실행해야 할 최우선 과제를 굵게 1-2줄로 서술. TRL 수치와 위협 등급을 직접 연결할 것.
+> 아래 형식으로 우선순위 순서 3가지를 작성하세요 (각 1줄, TRL 수치·경쟁사 위협 등급 직접 연결):
+> 1. [기술명] — [경쟁사 위협 등급·TRL 근거] → {self_company}가 N개월 내 실행할 구체적 행동
+> 2. [기술명] — [근거] → [구체적 행동]
+> 3. [기술명] — [근거] → [구체적 행동]
 
 # 1. 분석 배경
-- 왜 지금 {technologies}를 전략적으로 분석해야 하는가를 {self_company} 관점에서 서술
-- 아래 항목을 순서대로 포함할 것:
-  1. 분석 배경 및 목적 (2줄 이상)
-  2. 시장 규모·수요 변화 — 증거에서 구체 수치(달러·성장률 등)를 인용 [N]
-  3. 경쟁 압박 현황 — 주요 경쟁사({competitors}) 동향 요약 [N]
-  4. 기술 발전 속도와 {self_company}의 전략적 위기감 (2줄 이상)
-  5. 본 보고서의 분석 범위와 독자 활용 방법 (1줄)
-- 수치는 증거에 있는 것만 인용, 임의 생성 금지
-- 최소 [N] 인용 5개, 분량 최소 15줄
+아래 5개 항목을 각각 2줄 이상 서술하세요 (총 분량 최소 15줄):
+
+1. **분석 목적**: 왜 지금 {technologies}를 전략적으로 분석해야 하는가 ({self_company} 관점)
+2. **시장 동향**: 증거에서 수치(달러·퍼센트·성장률)를 직접 인용하여 시장 규모 서술 [N] 필수. 수치가 없으면 "시장 규모는 공개 데이터 기준 ~" 형태로 서술.
+3. **경쟁 압박**: {competitors} 각사의 최신 동향(양산·투자·파트너십)을 구체적으로 [N] 인용하여 서술
+4. **기술 변화 속도**: {technologies} 각 기술의 TRL 진행 속도와 {self_company}의 대응 필요성
+5. **보고서 범위**: 분석 대상 기술·경쟁사 범위 및 독자 활용 방법
+
+- 수치는 증거 원문에 명시된 것만 인용. 없으면 "공개 정보 미확인"으로 표기 (절대 추측 수치 작성 금지)
+- [N] 인용 최소 5개, 분량 최소 15줄
 
 # 2. 기술별 개발 현황
 각 기술에 대해 ## 2-N. 기술명 소제목으로 분리하세요.
@@ -128,12 +146,6 @@ REPORT_PROMPT = """당신은 {self_company} 내부 R&D 전략 담당자입니다
 [데이터 A]의 "위협 매트릭스" 표를 삽입하고, 투자·채용 신호(investment_signal)가 있는 경쟁사를 강조하여 서술하세요.
 위협 수준 "높음" 경쟁사의 단기 위협 시나리오를 1-2줄로 서술.
 
-## 3-2. 주목할 스타트업 및 신흥 플레이어
-아래 형식으로 표를 작성하세요 (증거에서 언급된 스타트업·신흥 기업이 있을 때만, 없으면 "확인된 스타트업 없음" 명시):
-
-| 기업명 | 기술 분야 | 주요 활동 | 위협 수준 | 출처 |
-|--------|----------|----------|----------|------|
-
 # 4. 전략적 시사점
 3절 분석 결과를 근거로 {self_company}가 취해야 할 전략을 시계열로 서술합니다.
 각 제언은 TRL 수치·위협 등급과 직접 연결된 논거를 제시해야 합니다.
@@ -141,18 +153,20 @@ REPORT_PROMPT = """당신은 {self_company} 내부 R&D 전략 담당자입니다
 **엄수**: 4-1·4-2·4-3·4-4 전체에서 [N] 인용 총 10개 이상, 인용 없는 주장 금지
 
 ## 4-1. 단기 과제 (0~1년)
-최소 3개 과제, 각 과제:
-- **과제명**
-- 배경: 경쟁사 TRL·위협 등급 언급 + [N] 인용
-- 목표: 구체적 달성 지표 또는 산출물
-- 리스크: 주요 장애 요인 1가지
+최소 3개 과제. **각 과제는 아래 5개 항목을 모두 포함하고 최소 6줄 이상 서술:**
+- **과제명** (기술명 + 구체적 행동 포함, 예: "HBM4 Nvidia 공급 계약 Q3 확정")
+- 배경: 경쟁사 TRL·위협 등급 수치와 함께 왜 지금 해야 하는지 2줄 이상 서술 + [N] 인용 1개 이상
+- 목표: 구체적 산출물 또는 마일스톤 (예: "양산 라인 인증 완료", "고객사 PVT 통과") — 수치는 증거 있을 때만
+- 실행 방법: 내부 R&D 조직, 외부 파트너, 필요 투자 방향 1줄
+- 리스크: 주요 장애 요인 및 완화 방안 1줄
 
 ## 4-2. 중기 기술 포지셔닝 (2~3년)
-최소 3개 방향, 각 방향:
-- **방향명**
-- 근거: 기술 트렌드·경쟁사 동향 + [N] 인용
-- 기대 효과: {self_company}가 얻을 경쟁 우위
-- 투자 우선순위: 높음/중간/낮음 + 이유
+최소 3개 방향. **각 방향은 아래 5개 항목을 모두 포함하고 최소 6줄 이상 서술:**
+- **방향명** (기술명 + 목표 포함, 예: "PIM 표준화 주도 및 생태계 선점")
+- 근거: 기술 트렌드·경쟁사 동향 2줄 이상 + [N] 인용 1개 이상
+- 기대 효과: {self_company}가 2~3년 후 얻을 구체적 경쟁 우위
+- 투자 우선순위: 높음/중간/낮음 + 이유 (TRL 갭·시장 규모·경쟁 상황 근거)
+- 선결 조건: 이 방향을 실행하기 위해 단기(4-1)에서 반드시 확보해야 할 전제
 
 ## 4-3. 장기·신규 개념 (3~5년+)
 {self_company} R&D가 3-5년 시계로 선점해야 할 차세대 기술 방향을 서술합니다.
@@ -171,10 +185,30 @@ REPORT_PROMPT = """당신은 {self_company} 내부 R&D 전략 담당자입니다
 전체 4-3 분량 최소 20줄, [N] 인용 최소 5개
 
 ## 4-4. 협력·파트너십 전략
-- 기술별 유효한 외부 파트너 유형 (고객사, 장비사, 표준화 단체, 연구기관)
-- 각 기술당 최소 1개 협력 방향 + [N] 인용 1개
+{self_company}가 기술 경쟁력 확보를 위해 체결해야 할 외부 파트너십을 기술별로 구체화합니다.
+**총 분량 최소 25줄, [N] 인용 최소 5개**
 
-전체 4절 분량: 최소 40줄
+### HBM4 협력
+- **공정·패키징 파트너** (예: TSMC, OSAT 업체): 협력 목적(예: 하이브리드 본딩, 어드밴스드 패키징), 협력 형태(JDA·공동 R&D·위탁 생산 중 택일), 기대 효과를 구체적으로 서술 + [N] 인용
+- **수요처·고객사** (예: Nvidia, AMD, Google, Microsoft): SK Hynix-고객 간 현황 또는 경쟁사 사례를 증거에서 찾아 서술. 장기 공급계약·JDA 추진 근거 + [N] 인용
+
+### PIM 협력
+- **표준화 단체** (JEDEC, CXL Consortium, SEMI): {self_company}의 표준 참여 현황 또는 경쟁사 참여 동향 + [N] 인용. {self_company}가 표준안 주도 가능성 분석
+- **AI 연구기관·하이퍼스케일러**: 공동 연구 또는 파일럿 배포 형태 (대학, 국가연구소, AWS/Azure/Google Cloud). 구체적 협력 목적(PIM SW 스택, 컴파일러, 워크로드 검증) 서술 + [N] 인용
+
+### CXL 협력
+- **데이터센터 고객사** (AWS, Azure, Google Cloud, Meta): 파일럿 프로그램·POC(Proof of Concept) 추진 근거. 경쟁사 파트너십 사례를 증거에서 인용하여 {self_company} 전략과 비교 + [N] 인용
+- **SoC·프로세서 파트너** (AMD, Intel, Arm): CXL 인터페이스 최적화 및 레퍼런스 디자인 협력 형태 서술
+
+### 협력 우선순위 종합
+아래 표를 작성하세요 (증거에서 언급된 협력 사례 우선 포함):
+
+| 파트너 유형 | 대상 기술 | 협력 형태 | 우선순위 | 근거 [N] |
+|------------|----------|----------|----------|---------|
+
+- 우선순위 판단 기준: TRL 갭 해소 기여도 + 위협 등급 + 시장 진입 속도
+
+전체 4절 분량: 최소 50줄
 
 # REFERENCE
 - [1] 제목, URL 또는 DOI, 접근일: {today}
@@ -186,11 +220,17 @@ REPORT_PROMPT = """당신은 {self_company} 내부 R&D 전략 담당자입니다
 - trl_label이 "추정"인 항목은 본문에 반드시 "추정" 또는 "(추정)" 표기
 - trl_label이 "확정"인 항목은 그대로 서술 가능
 - 수율·원가·미공개 로드맵 단정 금지
-- **수치 생성 절대 금지 (엄수)**: 시장 점유율(%)·매출액·판매량·목표 수치 등 구체적 숫자는 증거 원문에 명시된 경우에만 "[N]" 인용 형태로 서술. 증거 없는 수치는 서술하지 말 것.
-  - 금지 예시: "시장 점유율 10% 확보", "매출 $X억 달성", "생산량 Y% 증가"
-  - 허용 형식: "증거 [N]에 따르면 HBM 시장 규모는 약 $XX억 규모로 추정됨"
-- 제품 출하/납품 실적 구체 수치는 증거 없으면 서술 금지
-- 목표 지표 서술 시 "증거에 기반한 방향성"으로 서술: "양산 가속화", "시장 리더십 강화" 등 방향 표현 사용, 구체 수치는 증거가 있을 때만 인용
+- **수치 생성 절대 금지 (엄수)**:
+  - 시장 점유율(%)·매출액·판매량·목표 수치·달성률 등 구체 숫자는 증거 원문에 명시된 경우에만 "[N]" 인용 형태로 서술
+  - **금지 예시 (절대 작성 불가)**:
+    - "시장 점유율 10% 확보", "점유율 30% 달성"
+    - "양산 능력 20% 향상", "생산량 X% 증가"
+    - "매출 $XX억 달성"
+    - "$XX억 규모" (XX가 실제 수치가 아닌 경우)
+    - "TRL을 X로 향상"이 증거 없는 경우
+  - **허용 형식**: "증거 [N]에 따르면 HBM 시장은 약 $16B 규모로 추정"
+  - 수치 모를 때 → "시장 규모는 공개 데이터 기준 고성장 중" 등 방향성만 서술
+- 목표 지표: 방향성 표현만 허용 ("양산 가속화", "상용화 확대", "경쟁력 강화") — 구체 % 수치는 증거 있을 때만
 
 **Formatting 규칙**
 - Markdown 헤딩: `#`, `##`, `###` 사용 — bold(`**`) 감싸기 금지
@@ -359,6 +399,17 @@ def _build_prebuilt_tables(
     return "\n\n".join(tables)
 
 
+def _format_evidence_item(idx: int, item: dict) -> str:
+    """단일 증거 항목을 [N] 포맷으로 변환. idx는 evidence_store 0-based 인덱스."""
+    st = item.get("source_type", "")
+    source_tag = " [논문]" if st == "paper" else " [특허]" if st == "patent" else ""
+    return (
+        f"[{idx + 1}]{source_tag} {item.get('title', '')} ({item.get('date', '')})\n"
+        f"    {item.get('snippet', '')[:250]}\n"
+        f"    출처: {item.get('url', '')}"
+    )
+
+
 def _build_evidence_summary(evidence_store: list, competitors: list, max_total: int = 50) -> str:
     """증거를 회사·기술별로 그룹핑하여 LLM에 전달"""
     by_topic: dict[str, list[tuple[int, dict]]] = {"일반": []}
@@ -368,16 +419,15 @@ def _build_evidence_summary(evidence_store: list, competitors: list, max_total: 
         categorized = False
         for comp in competitors:
             if comp.lower() in text:
-                key = comp
-                by_topic.setdefault(key, [])
-                by_topic[key].append((i, item))
+                by_topic.setdefault(comp, [])
+                by_topic[comp].append((i, item))
                 categorized = True
                 break
         if not categorized:
             by_topic["일반"].append((i, item))
 
     lines = []
-    shown = 0
+    shown_indices: set[int] = set()
     max_per_group = max(3, max_total // (len(competitors) + 1))
 
     for group in competitors + ["일반"]:
@@ -386,22 +436,19 @@ def _build_evidence_summary(evidence_store: list, competitors: list, max_total: 
             continue
         lines.append(f"\n--- {group} 관련 ({len(items)}건) ---")
         for idx, item in items[:max_per_group]:
-            source_tag = ""
-            st = item.get("source_type", "")
-            if st == "paper":
-                source_tag = " [논문]"
-            elif st == "patent":
-                source_tag = " [특허]"
-            lines.append(
-                f"[{idx + 1}]{source_tag} {item.get('title', '')} ({item.get('date', '')})\n"
-                f"    {item.get('snippet', '')[:250]}\n"
-                f"    출처: {item.get('url', '')}"
-            )
-            shown += 1
+            if idx in shown_indices:
+                continue  # 중복 출력 방지
+            shown_indices.add(idx)
+            lines.append(_format_evidence_item(idx, item))
         if len(items) > max_per_group:
             lines.append(f"  ... 외 {len(items) - max_per_group}건")
 
-    lines.insert(0, f"(전체 {len(evidence_store)}건 중 {shown}건 표시)")
+    valid_nums = sorted(shown_indices)
+    header = (
+        f"(전체 {len(evidence_store)}건 중 {len(shown_indices)}건 표시)\n"
+        f"⚠️ 인용 시 아래 번호만 사용: {[n+1 for n in valid_nums]}"
+    )
+    lines.insert(0, header)
     return "\n".join(lines)
 
 
@@ -414,52 +461,73 @@ def _build_evidence_summary_indexed(
     """
     evidence_index 쿼리 기반 증거 요약.
     인덱스 미구축 시 기존 방식 폴백.
+    중복 항목은 한 번만 출력 (동일 URL이 여러 그룹에 나타날 때 idx 혼선 방지).
     """
     if not ev_idx.is_index_ready():
         return _build_evidence_summary(evidence_store, competitors)
 
-    lines = []
-    shown = 0
+    # URL → evidence_store 1-based 인덱스 맵 (사전 구축, 매번 O(N) 탐색 방지)
+    url_to_idx: dict[str, int] = {}
+    for i, e in enumerate(evidence_store):
+        url = e.get("url", "")
+        if url and url not in url_to_idx:
+            url_to_idx[url] = i + 1  # 1-based
 
-    # 배경 섹션 용 시장 동향 쿼리
+    lines = []
+    shown_indices: set[int] = set()  # 중복 출력 방지용
+
+    def _append_items(section_label: str, items: list) -> None:
+        section_lines = []
+        for item in items:
+            url = item.get("url", "")
+            idx1 = url_to_idx.get(url)
+            if idx1 is None or idx1 in shown_indices:
+                continue  # URL 매핑 불가 또는 이미 표시한 항목 스킵
+            shown_indices.add(idx1)
+            section_lines.append(_format_evidence_item(idx1 - 1, item))
+        if section_lines:
+            lines.append(f"\n--- {section_label} ({len(section_lines)}건) ---")
+            lines.extend(section_lines)
+
+    # 배경 섹션용 시장 동향 쿼리
     tech_str = " ".join(technologies)
-    market_items = ev_idx.query_evidence(
-        f"{tech_str} market demand trend 2025 2026",
-        k=k_per_section,
+    _append_items("시장 동향", ev_idx.query_evidence(
+        f"{tech_str} market demand trend 2025 2026", k=k_per_section,
+    ))
+
+    # 자사 쿼리
+    self_company_items = ev_idx.query_evidence(
+        f"SK Hynix {tech_str} technology development production", k=k_per_section,
     )
-    if market_items:
-        lines.append(f"\n--- 시장 동향 ({len(market_items)}건) ---")
-        for item in market_items:
-            idx = next((i for i, e in enumerate(evidence_store) if e.get("url") == item.get("url")), 0)
-            st = item.get("source_type", "")
-            source_tag = " [논문]" if st == "paper" else " [특허]" if st == "patent" else ""
-            lines.append(
-                f"[{idx + 1}]{source_tag} {item.get('title', '')} ({item.get('date', '')})\n"
-                f"    {item.get('snippet', '')[:250]}\n"
-                f"    출처: {item.get('url', '')}"
-            )
-            shown += 1
+    _append_items("SK Hynix (자사)", self_company_items)
 
     # 경쟁사별 쿼리
     for comp in competitors:
-        comp_items = ev_idx.query_evidence(
-            f"{comp} {tech_str} technology strategy development",
-            k=k_per_section,
-        )
-        if comp_items:
-            lines.append(f"\n--- {comp} 관련 ({len(comp_items)}건) ---")
-            for item in comp_items:
-                idx = next((i for i, e in enumerate(evidence_store) if e.get("url") == item.get("url")), 0)
-                st = item.get("source_type", "")
-                source_tag = " [논문]" if st == "paper" else " [특허]" if st == "patent" else ""
-                lines.append(
-                    f"[{idx + 1}]{source_tag} {item.get('title', '')} ({item.get('date', '')})\n"
-                    f"    {item.get('snippet', '')[:250]}\n"
-                    f"    출처: {item.get('url', '')}"
-                )
-                shown += 1
+        _append_items(f"{comp}", ev_idx.query_evidence(
+            f"{comp} {tech_str} technology strategy development", k=k_per_section,
+        ))
 
-    lines.insert(0, f"(전체 {len(evidence_store)}건 중 {shown}건 쿼리 기반 표시)")
+    valid_nums = sorted(shown_indices)
+
+    # ── 인용 매니페스트: LLM이 본문에서 사용할 번호와 제목을 명시 ──
+    # 이 목록에 없는 번호를 사용하면 REFERENCE가 잘못 매핑됨 → 절대 사용 금지 명시
+    manifest_lines = [
+        "╔══ 확정된 인용 번호 목록 (이 번호를 본문에 그대로 사용) ══╗",
+    ]
+    for idx in valid_nums:
+        item = evidence_store[idx - 1]
+        title = item.get("title", "")[:80]
+        url = item.get("url", "")
+        manifest_lines.append(f"  [{idx}] {title}  →  {url}")
+    manifest_lines.append("╚════════════════════════════════════════════════╝")
+    manifest = "\n".join(manifest_lines)
+
+    header = (
+        f"(전체 {len(evidence_store)}건 중 {len(shown_indices)}건 쿼리 기반 표시)\n"
+        f"⚠️ 인용 시 반드시 아래 번호만 사용 (다른 번호 사용 금지): {valid_nums}\n\n"
+        + manifest
+    )
+    lines.insert(0, header)
     return "\n".join(lines)
 
 

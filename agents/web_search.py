@@ -40,17 +40,31 @@ _SEMICONDUCTOR_KEYWORDS = {
 # 노이즈 도메인 블랙리스트 (반도체 키워드와 무관한 동명 서비스만 등록)
 # 채용공고(linkedin, talentify)·투자뉴스(globenewswire)는 TRL 신호로 유효 → 키워드 필터에 위임
 _NOISE_DOMAINS = {
-    "inriver.com",   # Marketing SaaS — PIM = Product Information Management
-    "pimic.ai",      # Product Information Management SaaS — PIM 약어 오검색 유발
+    # PIM = Product Information Management SaaS 도메인
+    "inriver.com", "pimic.ai", "akeneo.com", "salsify.com",
+    "struct.com", "gepard.io", "startwithdata.com", "startwithdata.co.uk",
+    "stedger.com", "plytix.com", "catsy.com", "contentserv.com",
+    "stibo.com", "riversand.com", "syndigo.com",
 }
 
-# 제목에 이 문자열이 있으면 반도체 키워드가 있어도 거부 (약어 오검색 방지)
-# 예: "Product Information Management" → PIM 약어로 인해 반도체 키워드 매칭
+# 제목에 이 문자열 중 하나라도 있으면 반도체 키워드가 있어도 거부
+# PIM 약어를 공유하는 비반도체 분야 필터
 _NOISE_TITLE_PATTERNS = [
-    "product information management",   # PIM 약어 오검색
-    "patient information",              # PIM 의료 약어
+    "product information management",
+    "patient information",
     "performance information management",
     "personal information management",
+    "pim implementation",       # SaaS PIM 도입 기사
+    "pim solution",             # SaaS PIM 솔루션
+    "pim software",             # SaaS PIM 소프트웨어
+    "pim changelog",            # SaaS PIM 업데이트 로그
+    "pim scalab",               # SaaS PIM 확장성
+    "pim migration",            # SaaS PIM 마이그레이션
+    "pim integration",          # SaaS PIM 연동
+    "pim platform",             # SaaS PIM 플랫폼 (반도체 PIM 플랫폼과 구분 필요 → 도메인 필터와 병행)
+    "winter release",           # SaaS 분기 릴리스 노트
+    "spring release",
+    "agentic ai product",       # AI Product 관련 SaaS
 ]
 
 # 최소 허용 발행 연도 — 이 연도보다 오래된 기사는 기본적으로 필터링

@@ -147,9 +147,16 @@ def _check_sc2(state: AgentState) -> SCStatus:
 # ── SC3: 보고서 단계 ──────────────────────────────────────────────
 
 FORBIDDEN_PATTERNS = [
+    # 수율·원가 단정
     (r"수율[이가은는을]\s*(?:약\s*)?\d+[%％]", "수율 수치 단정"),
     (r"원가[가이은는를]\s*(?:약\s*)?\d+", "원가 수치 단정"),
     (r"수율[이가은는을]\s*\d+", "수율 수치 단정"),
+    # $XX / $X 미완성 placeholder
+    (r"\$X+[억조]?", "미완성 수치 placeholder ($XX)"),
+    (r"\$\?+", "미완성 수치 placeholder ($??)"),
+    # 증거 없는 목표 퍼센트 수치 (양산 능력 N% 향상, 점유율 N% 확보 등)
+    (r"(?:양산|생산|점유율|시장)\s*\S*\s*\d+\s*[%％]\s*(?:향상|확보|달성|증가)", "증거 없는 목표 수치"),
+    (r"점유율\s*\d+\s*[%％]", "근거 없는 시장 점유율 수치"),
 ]
 
 
@@ -251,7 +258,7 @@ def _build_structural_feedback(sc_status: dict) -> str:
         lines.append(f"- SUMMARY가 700자를 초과합니다 (현재 {actual}자) — 핵심만 압축하세요")
     if sc_status.get("sc3_forbidden") != "pass":
         found = sc_status.get("sc3_forbidden_found", [])
-        lines.append(f"- Compliance 위반 표현 감지: {'; '.join(found)} — 수율·원가 단정 금지")
+        lines.append(f"- Compliance 위반 표현 감지: {'; '.join(found)} — 수율·원가 단정 금지, $XX placeholder 또는 증거 없는 목표 수치 삭제 필요")
     if sc_status.get("sc3_citation_bounds") != "pass":
         lines.append("- 본문 인용 번호가 증거 자료 범위를 초과합니다 — 존재하지 않는 출처를 인용하고 있음")
     if sc_status.get("sc3_compliance") != "pass":

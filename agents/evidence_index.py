@@ -106,9 +106,39 @@ def build_evidence_index(evidence_store: list[EvidenceItem]) -> bool:
         return False
 
 
+_NOISE_DOMAINS = {
+    "inriver.com", "pimic.ai", "akeneo.com", "salsify.com",
+    "struct.com", "gepard.io", "startwithdata.com", "startwithdata.co.uk",
+    "stedger.com", "plytix.com", "catsy.com", "contentserv.com",
+    "stibo.com", "riversand.com", "syndigo.com",
+}
+
+_NOISE_TITLE_PATTERNS = [
+    "product information management", "patient information",
+    "pim implementation", "pim solution", "pim software",
+    "pim changelog", "pim scalab", "pim migration", "pim integration",
+    "pim platform", "winter release", "spring release", "agentic ai product",
+]
+
+
 def _is_semiconductor_relevant(item: EvidenceItem) -> bool:
-    """제목+스니펫에 반도체 도메인 키워드가 하나라도 있어야 통과"""
-    text = (item.get("title", "") + " " + item.get("snippet", "")).lower()
+    """제목+스니펫에 반도체 도메인 키워드가 있고, 노이즈 도메인/제목이 아니어야 통과"""
+    url = item.get("url", "")
+    title = item.get("title", "")
+
+    # 도메인 블랙리스트
+    import re as _re
+    domain = url.split("/")[2] if url.startswith("http") else ""
+    bare = _re.sub(r'^(www\.|apps\.|m\.|emea\.|kr\.|us\.|eu\.)+', '', domain)
+    if bare in _NOISE_DOMAINS:
+        return False
+
+    # 제목 노이즈 패턴
+    title_lower = title.lower()
+    if any(p in title_lower for p in _NOISE_TITLE_PATTERNS):
+        return False
+
+    text = (title + " " + item.get("snippet", "")).lower()
     return any(kw in text for kw in _SEMICONDUCTOR_KEYWORDS)
 
 
