@@ -35,6 +35,19 @@ _STARTUP_QUERIES = [
     "CXL memory pooling startup new entrant 2025",
 ]
 
+# Concept-based next-gen queries — captures alternative technologies regardless of naming
+_NEXTGEN_QUERIES = [
+    "memory bandwidth bottleneck solution AI chip architecture 2025",
+    "near-memory computing processor memory integration roadmap",
+    "in-package memory compute convergence semiconductor 2025 2026",
+    "memory-centric computing architecture AI inference server",
+    "disaggregated memory pooling next generation data center",
+    "memory interconnect beyond CXL future standard",
+    "Intel memory architecture AI chip roadmap 2025 2026",
+    "AMD memory subsystem next generation GPU AI accelerator",
+    "Samsung Micron post-HBM memory technology roadmap",
+]
+
 
 def _build_queries(technologies: list[str], competitors: list[str], keywords: list[str]) -> list[str]:
     year = date.today().year
@@ -83,6 +96,7 @@ async def _fetch_openalex_tech(
     technologies: list[str],
     competitors: list[str],
     headers: dict,
+    api_key: str | None = None,
 ) -> list[EvidenceItem]:
     query = tech
     related_kws = [kw for kw in keywords if tech.lower() in kw.lower()]
@@ -95,6 +109,8 @@ async def _fetch_openalex_tech(
         "per_page": 10,
         "select": "id,doi,title,publication_date,abstract_inverted_index",
     }
+    if api_key:
+        params["api_key"] = api_key
     try:
         async with session.get(
             "https://api.openalex.org/works", headers=headers, params=params, timeout=aiohttp.ClientTimeout(total=15)
@@ -134,13 +150,12 @@ async def _search_openalex_async(
     technologies: list[str], keywords: list[str], competitors: list[str]
 ) -> list[EvidenceItem]:
     api_key = os.environ.get("OPENALEX_API_KEY")
+    # OpenAlex uses api_key as query param, not Authorization header
     headers = {"User-Agent": "rd-strategy-agent/0.1 (mailto:admin@example.com)"}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
 
     async with aiohttp.ClientSession() as session:
         tasks = [
-            _fetch_openalex_tech(session, tech, keywords, technologies, competitors, headers)
+            _fetch_openalex_tech(session, tech, keywords, technologies, competitors, headers, api_key)
             for tech in technologies
         ]
         results_nested = await asyncio.gather(*tasks)
@@ -173,7 +188,7 @@ async def _run_async(state: AgentState) -> dict:
     new_evidence: list[EvidenceItem] = []
 
     # --- Tavily (parallel) ---
-    queries = _build_queries(technologies, competitors, keywords) + _STARTUP_QUERIES
+    queries = _build_queries(technologies, competitors, keywords) + _STARTUP_QUERIES + _NEXTGEN_QUERIES
     print(f"[WebSearch] Firing {len(queries)} Tavily queries in parallel...")
     client = AsyncTavilyClient(api_key=os.environ["TAVILY_API_KEY"])
     raw_results = await asyncio.gather(*[_fetch_tavily(client, q) for q in queries])
