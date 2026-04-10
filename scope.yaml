@@ -1,0 +1,23 @@
+# 분석 범위 설정 파일
+# 구현 착수 시 이 파일의 값을 확정하고 README에 반영
+
+technologies:
+  - HBM4
+  - PIM
+  - CXL
+
+competitors:
+  - Samsung
+  - Micron
+  - Intel
+  - AMD
+
+keywords:
+  - HBM4 memory bandwidth
+  - Processing-in-Memory semiconductor
+  - CXL interconnect standard
+  - memory compute integration
+  - near-memory computing
+
+n_evidence_min: 5      # 기술당 최소 공신력 출처 건수 (SC1-1)
+max_competitors: 5     # 분석 경쟁사 최대 수 (범위 과대 방지)

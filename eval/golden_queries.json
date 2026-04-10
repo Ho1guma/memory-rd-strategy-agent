@@ -1,0 +1,62 @@
+[
+  {
+    "query_id": "q01",
+    "query": "HBM4 memory bandwidth specification Samsung",
+    "relevant_keywords": ["HBM4", "bandwidth", "Samsung"],
+    "notes": "현황 쿼리"
+  },
+  {
+    "query_id": "q02",
+    "query": "HBM4 limitations thermal power density challenges",
+    "relevant_keywords": ["HBM4", "thermal", "limitations"],
+    "notes": "한계·비판 쿼리"
+  },
+  {
+    "query_id": "q03",
+    "query": "Processing-in-Memory PIM semiconductor latest development 2024",
+    "relevant_keywords": ["PIM", "processing-in-memory", "semiconductor"],
+    "notes": "현황 쿼리"
+  },
+  {
+    "query_id": "q04",
+    "query": "CXL interconnect standard consortium roadmap",
+    "relevant_keywords": ["CXL", "interconnect", "standard"],
+    "notes": "현황 쿼리"
+  },
+  {
+    "query_id": "q05",
+    "query": "SK Hynix HBM4 TRL technology readiness investment",
+    "relevant_keywords": ["SK Hynix", "HBM4", "investment"],
+    "notes": "채용·투자 신호 쿼리"
+  },
+  {
+    "query_id": "q06",
+    "query": "Micron CXL memory module production",
+    "relevant_keywords": ["Micron", "CXL"],
+    "notes": "현황 쿼리"
+  },
+  {
+    "query_id": "q07",
+    "query": "PIM vs near-memory computing comparison alternative",
+    "relevant_keywords": ["PIM", "near-memory"],
+    "notes": "경쟁·대안 쿼리"
+  },
+  {
+    "query_id": "q08",
+    "query": "HBM4 failed setback yield problem",
+    "relevant_keywords": ["HBM4", "yield", "problem"],
+    "notes": "반증 쿼리"
+  },
+  {
+    "query_id": "q09",
+    "query": "Intel CXL accelerator hiring R&D engineer",
+    "relevant_keywords": ["Intel", "CXL", "hiring"],
+    "notes": "채용·투자 신호 쿼리"
+  },
+  {
+    "query_id": "q10",
+    "query": "AMD PIM near-memory computing research paper 2024",
+    "relevant_keywords": ["AMD", "PIM", "research"],
+    "notes": "현황 쿼리"
+  }
+]
