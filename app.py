@@ -34,7 +34,7 @@ load_dotenv()
 
 
 # ── scope.yaml 로드 ──────────────────────────────────────────────
-REQUIRED_FIELDS = ["technologies", "competitors", "keywords", "n_evidence_min", "max_competitors"]
+REQUIRED_FIELDS = ["self_company", "technologies", "competitors", "keywords", "n_evidence_min", "max_competitors"]
 
 def load_scope(scope_path: str = None) -> dict:
     path = scope_path or os.environ.get("SCOPE_FILE", "scope.yaml")

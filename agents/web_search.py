@@ -41,10 +41,11 @@ def _build_queries(scope: dict, iteration_count: int) -> list[tuple[str, str | N
             else:
                 queries.append((template.format(tech=tech, year=year), None))
 
-    # SK Hynix 자사 현황 쿼리
+    # 자사 현황 쿼리
+    self_company = scope.get("self_company", "SK Hynix")
     for tech in technologies:
-        queries.append((f'"SK Hynix" "{tech}" mass production shipment {year}', None))
-        queries.append((f'"SK Hynix" "{tech}" technology status TRL readiness', None))
+        queries.append((f'"{self_company}" "{tech}" mass production shipment {year}', None))
+        queries.append((f'"{self_company}" "{tech}" technology status TRL readiness', None))
 
     if iteration_count > 0:
         for comp in competitors:

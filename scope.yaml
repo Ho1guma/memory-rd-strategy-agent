@@ -1,6 +1,8 @@
 # 분석 범위 설정 파일
 # 구현 착수 시 이 파일의 값을 확정하고 README에 반영
 
+self_company: SK Hynix       # 자사 — 비교표 자사 행, 자사 TRL 분석, 자사 검색 쿼리에 사용
+
 technologies:
   - HBM4
   - PIM

@@ -24,10 +24,11 @@ JSON_RETRY = 2  # JSON 파싱 실패 시 재시도 횟수
 
 TRL_ANALYSIS_PROMPT = """당신은 반도체 기업의 시니어 기술 전략 분석가입니다.
 
-아래 증거 자료를 바탕으로 각 경쟁사의 기술별 TRL(Technology Readiness Level, 1-9)을 추정하세요.
+아래 증거 자료를 바탕으로 각 회사의 기술별 TRL(Technology Readiness Level, 1-9)을 추정하세요.
 
 **분석 대상 — 아래 모든 조합({total_combinations}개)을 빠짐없이 커버할 것 (완결성)**
 - 기술: {technologies}
+- 자사: {self_company} (company 필드에 "{self_company}"로 표기)
 - 경쟁사: {competitors}
 
 **경쟁사별·기술별 증거 건수 (시스템 자동 집계 — evidence_count에 이 수치를 반영할 것)**
@@ -304,16 +305,20 @@ def analysis_agent(state: AgentState) -> dict:
         print("[Analysis] ⚠️ evidence_store 비어있음 — 빈 결과 반환")
         return {"trl_table": [], "threat_matrix": []}
 
+    # TRL 분석: 자사 + 경쟁사 모두 포함
+    self_company = scope.get("self_company", "SK Hynix")
+    analysis_companies = [self_company] + competitors
     evidence_by_company, grouped, evidence_counts = _group_evidence_by_company_indexed(
-        competitors, technologies, evidence_store,
+        analysis_companies, technologies, evidence_store,
     )
-    total_combinations = len(technologies) * len(competitors)
+    total_combinations = len(technologies) * len(analysis_companies)
 
     # T4: TRL 추정표
     print(f"[Analysis] TRL 추정표 생성 중 (증거 {len(evidence_store)}건, 조합 {total_combinations}개)...")
     trl_prompt = TRL_ANALYSIS_PROMPT.format(
         technologies=", ".join(technologies),
         competitors=", ".join(competitors),
+        self_company=self_company,
         total_combinations=total_combinations,
         evidence_counts=evidence_counts,
         evidence_by_company=evidence_by_company,

@@ -8,28 +8,16 @@ Analysis/Report 에이전트가 company×technology별 쿼리로 관련 증거 t
 - 저장: 프로세스 내 전역 변수 (FAISS 객체는 직렬화 불가 → TypedDict state 저장 불가)
 """
 
-import os
 from typing import Optional
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 
 from agents.state import EvidenceItem
+from agents.embeddings import get_embeddings
 
-EMBEDDING_MODEL = os.environ.get("EVIDENCE_INDEX_MODEL", "all-MiniLM-L6-v2")
-
-# 모듈 레벨 싱글턴: 프로세스 내에서 한 번만 로드
-_embeddings: Optional[HuggingFaceEmbeddings] = None
+# FAISS 인덱스 싱글턴 (임베딩 싱글턴은 agents.embeddings에서 관리)
 _faiss_index: Optional[FAISS] = None
 _evidence_map: dict[int, EvidenceItem] = {}  # FAISS doc id → EvidenceItem
-
-
-def _get_embeddings() -> HuggingFaceEmbeddings:
-    global _embeddings
-    if _embeddings is None:
-        print(f"[EvidenceIndex] 임베딩 모델 로드: {EMBEDDING_MODEL}")
-        _embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
-    return _embeddings
 
 
 def build_evidence_index(evidence_store: list[EvidenceItem]) -> bool:
@@ -57,7 +45,7 @@ def build_evidence_index(evidence_store: list[EvidenceItem]) -> bool:
         _evidence_map[i] = item
 
     try:
-        embeddings = _get_embeddings()
+        embeddings = get_embeddings()
         _faiss_index = FAISS.from_documents(docs, embeddings)
         print(f"[EvidenceIndex] 인덱싱 완료 ({len(docs)}건)")
         return True

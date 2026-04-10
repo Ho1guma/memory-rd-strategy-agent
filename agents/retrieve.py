@@ -13,13 +13,11 @@ from pathlib import Path
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
 from rank_bm25 import BM25Okapi
 
 from agents.state import AgentState, EvidenceItem
+from agents.embeddings import get_embeddings
 
-
-EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "BAAI/bge-m3")
 TOP_K = int(os.environ.get("TOP_K", 5))
 DATA_DIR = "data"
 
@@ -63,8 +61,7 @@ def retrieve_agent(state: AgentState) -> dict:
         print(f"[Retrieve] data/ 디렉토리가 비어 있음 — 로컬 검색 스킵")
         return {}
 
-    print(f"[Retrieve] 임베딩 모델 로드: {EMBEDDING_MODEL}")
-    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+    embeddings = get_embeddings()
 
     # 문서 로드 및 청킹
     loader = DirectoryLoader(DATA_DIR, glob="**/*.txt", loader_cls=TextLoader, silent_errors=True)
