@@ -2,6 +2,9 @@
 
 T4 Outcome: TRL estimation table (per company × technology) with evidence_count ≥ 2.
 T5 Outcome: Threat matrix (per company) with level + rationale.
+
+Evidence is retrieved via hybrid_search (dense + BM25 + RRF) per (company, technology)
+pair rather than passing the full evidence_store to the LLM.
 """
 from __future__ import annotations
 
@@ -11,6 +14,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from rd_strategy_agent.state import AgentState, TRLEntry, ThreatEntry
+from rd_strategy_agent.agents.retrieve import hybrid_search
 
 TRL_SYSTEM = """You are a semiconductor R&D intelligence analyst.
 Given collected evidence snippets, estimate TRL (1–9) for each (company, technology) pair.
@@ -39,23 +43,41 @@ Output JSON array (no markdown fences):
 """
 
 
-def _evidence_summary(state: AgentState) -> str:
-    lines = []
-    for i, ev in enumerate(state["evidence_store"][:60]):  # cap to avoid token overflow
-        lines.append(f"[{i+1}] {ev['title']} ({ev['date']}) — {ev['snippet'][:300]}")
-    return "\n".join(lines)
+def _build_pair_evidence(companies: list[str], technologies: list[str]) -> str:
+    """Run hybrid_search per (company, technology) pair and format as evidence block."""
+    blocks: list[str] = []
+    for company in companies:
+        for tech in technologies:
+            query = f"{company} {tech} TRL development production status"
+            chunks = hybrid_search(query, top_k=10)
+            if not chunks:
+                continue
+            lines = [f"### Evidence: {company} × {tech}"]
+            for chunk in chunks:
+                meta = chunk.get("meta", {})
+                title = meta.get("title", "")
+                url = meta.get("url", "")
+                date = meta.get("date", "")
+                text = chunk["text"][:300]
+                lines.append(f"- [{title}]({url}) ({date})\n  {text}")
+            blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
 
 
 def analysis_agent(state: AgentState) -> dict:
     """T4 + T5: Estimate TRL and threat level for each competitor."""
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     scope = state["scope"]
-    evidence_text = _evidence_summary(state)
+    technologies = scope.get("technologies", [])
+    competitors = scope.get("competitors", [])
+
+    evidence_text = _build_pair_evidence(competitors, technologies)
+
     context = (
-        f"Technologies: {scope.get('technologies')}\n"
-        f"Competitors: {scope.get('competitors')}\n"
+        f"Technologies: {technologies}\n"
+        f"Competitors: {competitors}\n"
         f"Threat level rules from scope.yaml: {scope.get('threat_level_rules', {})}\n\n"
-        f"Evidence:\n{evidence_text}"
+        f"Evidence (retrieved per company × technology):\n{evidence_text}"
     )
 
     # T4 — TRL table
@@ -66,7 +88,7 @@ def analysis_agent(state: AgentState) -> dict:
     trl_raw = trl_response.content.strip().lstrip("```json").lstrip("```").rstrip("```")
     trl_table: list[TRLEntry] = json.loads(trl_raw)
 
-    # T5 — Threat matrix (provide TRL table as context)
+    # T5 — Threat matrix
     threat_context = context + f"\n\nTRL Table:\n{json.dumps(trl_table, ensure_ascii=False, indent=2)}"
     threat_response = llm.invoke([
         SystemMessage(content=THREAT_SYSTEM),
