@@ -7,7 +7,9 @@ technologies:
   - PIM
   - CXL
 
-competitors: [Samsung, SK Hynix, Micron, Intel, AMD]  # e.g., [Samsung, SK Hynix, Micron, Intel, AMD]
+our_company: SK Hynix
+
+competitors: [Samsung, Micron, Intel, AMD]  # SK Hynix is our company — these are the rivals
 
 keywords:
   - HBM4 bandwidth memory

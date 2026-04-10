@@ -73,9 +73,11 @@ def analysis_agent(state: AgentState) -> dict:
 
     evidence_text = _build_pair_evidence(competitors, technologies)
 
+    our_company = scope.get("our_company", "SK Hynix")
     context = (
+        f"Our company (분석 주체): {our_company}\n"
         f"Technologies: {technologies}\n"
-        f"Competitors: {competitors}\n"
+        f"Competitors (경쟁사만 포함, 당사 제외): {competitors}\n"
         f"Threat level rules from scope.yaml: {scope.get('threat_level_rules', {})}\n\n"
         f"Evidence (retrieved per company × technology):\n{evidence_text}"
     )
