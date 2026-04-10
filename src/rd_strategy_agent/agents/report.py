@@ -43,21 +43,23 @@ Write a detailed Korean-language R&D strategy report in Markdown. Each section m
 **기술 개요 및 성숙도**
 - 핵심 스펙, 전작 대비 개선점, 현재 TRL 및 근거
 
-**경쟁사 개발 현황** (각 기업을 아래 형식으로 번호 작성)
+**경쟁사 개발 현황**
 
-1. **Samsung**
-   - 개발 중인 제품·공정 세대, 구체적 투자 규모 또는 공시 내용 [N]
-   - 채용 동향 (JD 키워드, 채용 규모 신호) [N]
+IMPORTANT: 각 기업은 반드시 아래와 같이 `### 번호. 기업명` 형식의 h3 헤딩으로 작성할 것. 헤딩 없이 bullet만 쓰는 것 금지.
 
-2. **Micron**
-   - 개발 중인 제품·공정 세대, 구체적 투자 규모 또는 공시 내용 [N]
-   - 채용 동향 [N]
+### 1. Samsung
+- 개발 중인 제품·공정 세대, 구체적 투자 규모 또는 공시 내용 [N]
+- 채용 동향 (JD 키워드, 채용 규모 신호) [N]
 
-3. **Intel**
-   - HBM 수요·채택 측면 동향 [N]
+### 2. Micron
+- 개발 중인 제품·공정 세대, 구체적 투자 규모 또는 공시 내용 [N]
+- 채용 동향 [N]
 
-4. **AMD**
-   - HBM 수요·채택 측면 동향 [N]
+### 3. Intel
+- HBM 수요·채택 측면 동향 [N]
+
+### 4. AMD
+- HBM 수요·채택 측면 동향 [N]
 
 **SK Hynix 포지션**
 - 당사 제품 현황, 시장 점유율, 강점·약점 분석 [N]
@@ -89,7 +91,27 @@ Write a detailed Korean-language R&D strategy report in Markdown. Each section m
 |------|----------|----------|--------------|
 | ...  | ...      | ...      | ...          |
 
-각 경쟁사별 위협 요인을 2~3문장으로 추가 서술.
+IMPORTANT: 각 경쟁사별 위협 요인은 반드시 아래와 같이 `### 기업명` 헤딩으로 분리하여 작성. bullet 나열 금지.
+
+### Samsung
+(위협 요인 2~3문장) [N]
+
+### Micron
+(위협 요인 2~3문장) [N]
+
+### Intel
+(위협 요인 2~3문장) [N]
+
+### AMD
+(위협 요인 2~3문장) [N]
+
+**주목할 스타트업 / 신흥 플레이어**
+
+수집된 evidence에서 HBM·PIM·CXL 관련 스타트업 또는 신흥 기업이 확인되면 아래 형식으로 추가 작성. evidence에 없으면 생략.
+
+| 기업명 | 기술 분야 | 투자·주요 동향 | SK Hynix 관련성 |
+|--------|----------|--------------|----------------|
+| ...    | ...      | ...          | ...            |
 
 ---
 
@@ -153,6 +175,11 @@ _SECTION_QUERIES = {
         "next generation memory technology beyond HBM neuromorphic PIM",
         "CXL future standard 3D stacked memory concept",
         "semiconductor memory long term research emerging technology",
+    ],
+    "startups": [
+        "HBM PIM CXL memory startup emerging company funding 2024 2025",
+        "AI memory accelerator startup semiconductor venture",
+        "processing in memory startup investment Series",
     ],
 }
 
@@ -222,20 +249,45 @@ def report_agent(state: AgentState) -> dict:
     ])
     draft = response.content
 
-    # Build reference list: in-text [N] → source entry via meta["url"]
-    citation_ids = sorted(set(re.findall(r"\[(\d+)\]", draft)), key=int)
+    # Build reference list: deduplicate by URL, then renumber sequentially 1,2,3...
+    raw_citation_ids = sorted(set(re.findall(r"\[(\d+)\]", draft)), key=int)
     id_map = {str(s["id"]): s for s in sources}
     today = date.today().isoformat()
+
+    old_to_new: dict[str, str] = {}  # old [N] → new sequential [M]
     reference_list: list[ReferenceItem] = []
-    for cid in citation_ids:
+    seen_ref_urls: set[str] = set()
+    new_idx = 1
+    for cid in raw_citation_ids:
         src = id_map.get(cid, {})
+        url = src.get("url", "")
+        if url and url in seen_ref_urls:
+            # map duplicate to already-assigned new index
+            existing = next(r for r in reference_list if r["url"] == url)
+            old_to_new[cid] = existing["citation_id"].strip("[]")
+            continue
+        seen_ref_urls.add(url)
+        old_to_new[cid] = str(new_idx)
         reference_list.append(
             ReferenceItem(
-                citation_id=f"[{cid}]",
-                url=src.get("url", ""),
-                title=src.get("title", f"Source {cid}"),
+                citation_id=f"[{new_idx}]",
+                url=url,
+                title=src.get("title", f"Source {new_idx}"),
                 accessed_date=today,
             )
         )
+        new_idx += 1
+
+    # Replace all [N] in draft with new sequential numbers
+    def _replace_citation(m: re.Match) -> str:
+        return f"[{old_to_new.get(m.group(1), m.group(1))}]"
+    draft = re.sub(r"\[(\d+)\]", _replace_citation, draft)
+
+    # Replace LLM-written REFERENCE section with clean code-generated version
+    ref_section = "\n## REFERENCE\n" + "\n".join(
+        f"{r['citation_id']} {r['title']}. {r['url']}. Accessed {r['accessed_date']}."
+        for r in reference_list
+    )
+    draft = re.sub(r"\n## REFERENCE.*", ref_section, draft, flags=re.DOTALL)
 
     return {"draft_report": draft, "reference_list": reference_list}
