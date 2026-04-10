@@ -80,15 +80,22 @@ def node_escalate(state: AgentState) -> dict:
 # ---------------------------------------------------------------------------
 
 def route_after_scope(state: AgentState) -> str:
+    # scope.yaml 로드 실패 시 즉시 종료
+    if state.get("last_error"):
+        return "escalate"
+
     scope = state.get("scope", {})
     competitors = scope.get("competitors", [])
     technologies = scope.get("technologies", [])
     max_comp = scope.get("max_competitors", 5)
 
     if len(competitors) > max_comp or len(technologies) > 3:
-        # Scope too large — loop back to T1
-        print(f"[Supervisor] Scope explosion: {len(competitors)} competitors, {len(technologies)} technologies. Re-scoping.")
-        return "scope"
+        # scope는 수동 설정이므로 루프백 없이 경고만 출력하고 진행
+        print(
+            f"[Supervisor] WARNING: scope exceeds limits "
+            f"({len(competitors)} competitors, {len(technologies)} technologies). "
+            "Proceeding — reduce scope.yaml manually if needed."
+        )
     return "evidence_gather"
 
 
@@ -145,8 +152,8 @@ def build_graph() -> StateGraph:
     g.set_entry_point("scope")
 
     g.add_conditional_edges("scope", route_after_scope, {
-        "scope": "scope",
         "evidence_gather": "evidence_gather",
+        "escalate": "escalate",
     })
     g.add_edge("evidence_gather", "sc1_check")
     g.add_edge("evidence_gather_retry", "sc1_check")

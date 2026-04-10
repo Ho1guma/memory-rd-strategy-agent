@@ -45,6 +45,7 @@ class SCStatus(TypedDict, total=False):
     SC2_2: str
     SC3_1: str
     SC3_2: str
+    SC3_3: str
 
 
 class AgentState(TypedDict):
