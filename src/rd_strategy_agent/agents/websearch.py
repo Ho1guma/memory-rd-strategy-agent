@@ -64,11 +64,24 @@ def _build_queries(technologies: list[str], competitors: list[str], keywords: li
     return queries
 
 
-def _tag_metadata(snippet: str, title: str, technologies: list[str], competitors: list[str]) -> tuple[list[str], list[str]]:
+def _tag_metadata(
+    snippet: str, title: str, technologies: list[str], competitors: list[str]
+) -> tuple[list[str], list[str], str]:
     text = (snippet + " " + title).lower()
     kws = [t for t in technologies if t.lower() in text]
     entities = [c for c in competitors if c.lower() in text]
-    return kws, entities
+    tagging_status = "ok" if kws or entities else "tagging_unavailable"
+    return kws, entities, tagging_status
+
+
+def _get_result_field(result: object, field: str, default: str = "") -> str:
+    if isinstance(result, dict):
+        value = result.get(field, default)
+    else:
+        value = getattr(result, field, default)
+    if isinstance(value, list):
+        return "\n".join(str(item) for item in value if item)
+    return value or default
 
 
 # ---------------------------------------------------------------------------
@@ -131,7 +144,7 @@ async def _fetch_openalex_tech(
         pub_date = work.get("publication_date") or ""
         abstract = _reconstruct_abstract(work.get("abstract_inverted_index"))
         snippet = abstract if abstract else title
-        kws, entities = _tag_metadata(snippet, title, technologies, competitors)
+        kws, entities, tagging_status = _tag_metadata(snippet, title, technologies, competitors)
         results.append(
             EvidenceItem(
                 url=url,
@@ -141,6 +154,7 @@ async def _fetch_openalex_tech(
                 domain="openalex.org",
                 keywords=kws,
                 entities=entities,
+                tagging_status=tagging_status,
             )
         )
     return results
@@ -202,7 +216,7 @@ async def _run_async(state: AgentState) -> dict:
             snippet = r.get("content", "")
             title = r.get("title", "")
             domain = url.split("/")[2] if url.startswith("http") else ""
-            kws, entities = _tag_metadata(snippet, title, technologies, competitors)
+            kws, entities, tagging_status = _tag_metadata(snippet, title, technologies, competitors)
             new_evidence.append(
                 EvidenceItem(
                     url=url,
@@ -212,6 +226,7 @@ async def _run_async(state: AgentState) -> dict:
                     domain=domain,
                     keywords=kws,
                     entities=entities,
+                    tagging_status=tagging_status,
                 )
             )
 

@@ -261,6 +261,8 @@ def report_agent(state: AgentState) -> dict:
         HumanMessage(content=context),
     ])
     draft = response.content
+    if "## REFERENCE" not in draft:
+        draft = draft.rstrip() + "\n\n## REFERENCE\n"
 
     # Build reference list: deduplicate by URL, then renumber sequentially 1,2,3...
     raw_citation_ids = sorted(set(re.findall(r"\[(\d+)\]", draft)), key=int)

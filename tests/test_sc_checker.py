@@ -1,5 +1,4 @@
 """Unit tests for Success Criteria checker (no LLM, no API calls)."""
-import pytest
 from rd_strategy_agent.utils.sc_checker import (
     check_sc1_1,
     check_sc1_2,
@@ -27,6 +26,7 @@ def make_state(**kwargs) -> AgentState:
         "threat_matrix": [],
         "draft_report": "",
         "reference_list": [],
+        "report_retry_count": 0,
         "last_error": None,
         "next_task": None,
     }
@@ -44,6 +44,7 @@ def make_evidence(tech: str, count: int) -> list[dict]:
             "domain": "example.com",
             "keywords": [tech],
             "entities": ["Samsung"],
+            "tagging_status": "ok",
         }
         for i in range(count)
     ]
@@ -69,9 +70,17 @@ class TestSC1_2:
         state = make_state(evidence_store=evidence)
         assert check_sc1_2(state) == "pass"
 
-    def test_fail_missing_keywords(self):
+    def test_pass_tagging_unavailable(self):
         ev = make_evidence("HBM4", 1)
         ev[0]["keywords"] = []
+        ev[0]["entities"] = []
+        ev[0]["tagging_status"] = "tagging_unavailable"
+        state = make_state(evidence_store=ev)
+        assert check_sc1_2(state) == "pass"
+
+    def test_fail_missing_metadata_field(self):
+        ev = make_evidence("HBM4", 1)
+        ev[0].pop("entities")
         state = make_state(evidence_store=ev)
         assert check_sc1_2(state) == "fail"
 
@@ -80,12 +89,16 @@ class TestSC2_1:
     def test_pass(self):
         trl_table = [
             {"company": "Samsung", "technology": "HBM4", "trl_range": "7", "evidence_count": 3, "label": "confirmed", "sources": ["[1]", "[2]", "[3]"]},
-            {"company": "SK Hynix", "technology": "HBM4", "trl_range": "6", "evidence_count": 2, "label": "estimated", "sources": ["[4]", "[5]"]},
+            {"company": "Samsung", "technology": "PIM", "trl_range": "5-6", "evidence_count": 2, "label": "estimated", "sources": ["[4]", "[5]"]},
+            {"company": "Samsung", "technology": "CXL", "trl_range": "5-6", "evidence_count": 2, "label": "estimated", "sources": ["[6]", "[7]"]},
+            {"company": "SK Hynix", "technology": "HBM4", "trl_range": "6", "evidence_count": 2, "label": "estimated", "sources": ["[8]", "[9]"]},
+            {"company": "SK Hynix", "technology": "PIM", "trl_range": "6", "evidence_count": 2, "label": "estimated", "sources": ["[10]", "[11]"]},
+            {"company": "SK Hynix", "technology": "CXL", "trl_range": "7", "evidence_count": 2, "label": "confirmed", "sources": ["[12]", "[13]"]},
         ]
         state = make_state(trl_table=trl_table)
         assert check_sc2_1(state) == "pass"
 
-    def test_fail_insufficient_evidence(self):
+    def test_fail_missing_pair(self):
         trl_table = [
             {"company": "Samsung", "technology": "HBM4", "trl_range": "7", "evidence_count": 1, "label": "confirmed", "sources": ["[1]"]},
             {"company": "SK Hynix", "technology": "HBM4", "trl_range": "6", "evidence_count": 2, "label": "estimated", "sources": ["[4]", "[5]"]},
@@ -94,12 +107,58 @@ class TestSC2_1:
         assert check_sc2_1(state) == "fail"
 
 
+class TestSC2_2:
+    def test_pass(self):
+        evidence = [
+            {
+                "url": "https://example.com/1",
+                "title": "Samsung hiring for HBM4",
+                "date": "2024-01-01",
+                "snippet": "Samsung hiring around HBM4 and packaging.",
+                "domain": "example.com",
+                "keywords": ["HBM4"],
+                "entities": ["Samsung"],
+                "tagging_status": "ok",
+            }
+        ]
+        trl_table = [
+            {"company": "Samsung", "technology": "HBM4", "trl_range": "5-6", "evidence_count": 2, "label": "estimated", "sources": ["[1]", "[2]"]},
+            {"company": "Samsung", "technology": "PIM", "trl_range": "정보 부족", "evidence_count": 0, "label": "insufficient", "sources": []},
+            {"company": "Samsung", "technology": "CXL", "trl_range": "정보 부족", "evidence_count": 0, "label": "insufficient", "sources": []},
+            {"company": "SK Hynix", "technology": "HBM4", "trl_range": "7", "evidence_count": 2, "label": "confirmed", "sources": ["[3]", "[4]"]},
+            {"company": "SK Hynix", "technology": "PIM", "trl_range": "정보 부족", "evidence_count": 0, "label": "insufficient", "sources": []},
+            {"company": "SK Hynix", "technology": "CXL", "trl_range": "정보 부족", "evidence_count": 0, "label": "insufficient", "sources": []},
+        ]
+        threat_matrix = [
+            {"company": "Samsung", "level": "high", "rationale": "TRL 5-6 with hiring signal."},
+            {"company": "SK Hynix", "level": "high", "rationale": "TRL 7 reached."},
+        ]
+        state = make_state(evidence_store=evidence, trl_table=trl_table, threat_matrix=threat_matrix)
+        assert check_sc2_2(state) == "pass"
+
+    def test_fail_on_trl_mismatch(self):
+        trl_table = [
+            {"company": "Samsung", "technology": "HBM4", "trl_range": "5-6", "evidence_count": 2, "label": "estimated", "sources": ["[1]", "[2]"]},
+            {"company": "Samsung", "technology": "PIM", "trl_range": "정보 부족", "evidence_count": 0, "label": "insufficient", "sources": []},
+            {"company": "Samsung", "technology": "CXL", "trl_range": "정보 부족", "evidence_count": 0, "label": "insufficient", "sources": []},
+            {"company": "SK Hynix", "technology": "HBM4", "trl_range": "7", "evidence_count": 2, "label": "confirmed", "sources": ["[3]", "[4]"]},
+            {"company": "SK Hynix", "technology": "PIM", "trl_range": "정보 부족", "evidence_count": 0, "label": "insufficient", "sources": []},
+            {"company": "SK Hynix", "technology": "CXL", "trl_range": "정보 부족", "evidence_count": 0, "label": "insufficient", "sources": []},
+        ]
+        threat_matrix = [
+            {"company": "Samsung", "level": "low", "rationale": "Wrong level."},
+            {"company": "SK Hynix", "level": "high", "rationale": "TRL 7 reached."},
+        ]
+        state = make_state(trl_table=trl_table, threat_matrix=threat_matrix)
+        assert check_sc2_2(state) == "fail"
+
+
 class TestSC3:
     VALID_REPORT = """## SUMMARY
-Key findings.
+짧은 요약 [1].
 
 ## 1. 분석 배경
-Background.
+Background [1].
 
 ## 2. 분석 대상 기술 현황
 Technology status [1].
