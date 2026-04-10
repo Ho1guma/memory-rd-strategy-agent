@@ -9,9 +9,29 @@ Control strategy (per PROJECT_PLAN.md §2.5):
 """
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
+import markdown as md_lib
+from weasyprint import HTML, CSS
 from langgraph.graph import StateGraph, END
 
 from rd_strategy_agent.state import AgentState
+
+_PDF_CSS = CSS(string="""
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+body {
+    font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    font-size: 11pt; line-height: 1.7; margin: 2.5cm 2cm; color: #1a1a1a;
+}
+h2 { font-size: 14pt; border-bottom: 1.5px solid #333; padding-bottom: 4px; font-weight: 700; }
+h3 { font-size: 12pt; font-weight: 700; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 10pt; }
+th, td { border: 1px solid #aaa; padding: 6px 10px; text-align: left; }
+th { background-color: #f0f0f0; font-weight: 700; }
+tr:nth-child(even) td { background-color: #fafafa; }
+a { color: #1a56db; }
+""")
 from rd_strategy_agent.agents.scope import scope_agent
 from rd_strategy_agent.agents.websearch import websearch_agent
 from rd_strategy_agent.agents.retrieve import retrieve_index
@@ -61,6 +81,18 @@ def node_report(state: AgentState) -> dict:
 def node_sc3_check(state: AgentState) -> dict:
     sc = sc_checker.run_all(state)
     return {"sc_status": sc}
+
+
+def node_pdf_export(state: AgentState) -> dict:
+    draft = state.get("draft_report", "")
+    draft = re.sub(r"^```(?:markdown)?\n?", "", draft.strip())
+    draft = re.sub(r"\n?```$", "", draft).strip()
+    html_body = md_lib.markdown(draft, extensions=["tables", "fenced_code", "toc"])
+    html = f'<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"></head><body>{html_body}</body></html>'
+    out = Path("report.pdf")
+    HTML(string=html, base_url=".").write_pdf(out, stylesheets=[_PDF_CSS])
+    print(f"[PDFExport] PDF saved → {out}")
+    return {}
 
 
 def node_escalate(state: AgentState) -> dict:
@@ -124,7 +156,7 @@ def route_after_sc2(state: AgentState) -> str:
 def route_after_sc3(state: AgentState) -> str:
     sc = state.get("sc_status", {})
     if sc.get("SC3_1") == "pass" and sc.get("SC3_2") == "pass":
-        return END
+        return "pdf_export"
     return "report"  # Re-draft (counted separately, no retry limit here)
 
 
@@ -147,6 +179,7 @@ def build_graph() -> StateGraph:
     g.add_node("sc2_check", node_sc2_check)
     g.add_node("report", node_report)
     g.add_node("sc3_check", node_sc3_check)
+    g.add_node("pdf_export", node_pdf_export)
     g.add_node("escalate", node_escalate)
 
     g.set_entry_point("scope")
@@ -170,9 +203,10 @@ def build_graph() -> StateGraph:
     })
     g.add_edge("report", "sc3_check")
     g.add_conditional_edges("sc3_check", route_after_sc3, {
-        END: END,
+        "pdf_export": "pdf_export",
         "report": "report",
     })
+    g.add_edge("pdf_export", END)
     g.add_edge("escalate", END)
 
     return g
