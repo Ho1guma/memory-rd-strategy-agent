@@ -27,6 +27,14 @@ QUERY_TEMPLATES = [
     '"{tech}" failed abandoned setback',
 ]
 
+# Fixed startup/emerging player queries — added regardless of tech/competitor config
+_STARTUP_QUERIES = [
+    "HBM PIM CXL memory startup emerging company funding 2024 2025",
+    "AI memory accelerator startup semiconductor venture investment",
+    "processing in memory startup Series funding valuation",
+    "CXL memory pooling startup new entrant 2025",
+]
+
 
 def _build_queries(technologies: list[str], competitors: list[str], keywords: list[str]) -> list[str]:
     year = date.today().year
@@ -165,7 +173,7 @@ async def _run_async(state: AgentState) -> dict:
     new_evidence: list[EvidenceItem] = []
 
     # --- Tavily (parallel) ---
-    queries = _build_queries(technologies, competitors, keywords)
+    queries = _build_queries(technologies, competitors, keywords) + _STARTUP_QUERIES
     print(f"[WebSearch] Firing {len(queries)} Tavily queries in parallel...")
     client = AsyncTavilyClient(api_key=os.environ["TAVILY_API_KEY"])
     raw_results = await asyncio.gather(*[_fetch_tavily(client, q) for q in queries])
