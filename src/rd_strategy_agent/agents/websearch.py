@@ -8,12 +8,13 @@ Outcome: evidence_store populated with metadata-tagged snippets from both source
 """
 from __future__ import annotations
 
+import asyncio
 import os
 from collections import Counter
 from datetime import date
 
-import requests
-from tavily import TavilyClient
+import aiohttp
+from tavily import AsyncTavilyClient
 
 from rd_strategy_agent.state import AgentState, EvidenceItem
 
@@ -67,115 +68,133 @@ def _reconstruct_abstract(inverted_index: dict | None) -> str:
     return " ".join(positions[i] for i in sorted(positions))
 
 
-def _search_openalex(technologies: list[str], keywords: list[str], competitors: list[str]) -> list[EvidenceItem]:
-    """Fetch top-10 latest papers per technology from OpenAlex."""
+async def _fetch_openalex_tech(
+    session: aiohttp.ClientSession,
+    tech: str,
+    keywords: list[str],
+    technologies: list[str],
+    competitors: list[str],
+    headers: dict,
+) -> list[EvidenceItem]:
+    query = tech
+    related_kws = [kw for kw in keywords if tech.lower() in kw.lower()]
+    if related_kws:
+        query = related_kws[0]
+
+    params = {
+        "search": query,
+        "sort": "publication_date:desc",
+        "per_page": 10,
+        "select": "id,doi,title,publication_date,abstract_inverted_index",
+    }
+    try:
+        async with session.get(
+            "https://api.openalex.org/works", headers=headers, params=params, timeout=aiohttp.ClientTimeout(total=15)
+        ) as resp:
+            resp.raise_for_status()
+            works = (await resp.json()).get("results", [])
+    except Exception as e:
+        print(f"[OpenAlex] query failed: {query!r} — {e}")
+        return []
+
+    results: list[EvidenceItem] = []
+    for work in works:
+        doi = work.get("doi") or ""
+        url = doi if doi else work.get("id", "")
+        if not url:
+            continue
+        title = work.get("title") or ""
+        pub_date = work.get("publication_date") or ""
+        abstract = _reconstruct_abstract(work.get("abstract_inverted_index"))
+        snippet = abstract if abstract else title
+        kws, entities = _tag_metadata(snippet, title, technologies, competitors)
+        results.append(
+            EvidenceItem(
+                url=url,
+                title=title,
+                date=pub_date,
+                snippet=snippet,
+                domain="openalex.org",
+                keywords=kws,
+                entities=entities,
+            )
+        )
+    return results
+
+
+async def _search_openalex_async(
+    technologies: list[str], keywords: list[str], competitors: list[str]
+) -> list[EvidenceItem]:
     api_key = os.environ.get("OPENALEX_API_KEY")
     headers = {"User-Agent": "rd-strategy-agent/0.1 (mailto:admin@example.com)"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
-    results: list[EvidenceItem] = []
+    async with aiohttp.ClientSession() as session:
+        tasks = [
+            _fetch_openalex_tech(session, tech, keywords, technologies, competitors, headers)
+            for tech in technologies
+        ]
+        results_nested = await asyncio.gather(*tasks)
 
-    for tech in technologies:
-        query = tech
-        # Augment with relevant keywords if available
-        related_kws = [kw for kw in keywords if tech.lower() in kw.lower()]
-        if related_kws:
-            query = related_kws[0]
-
-        try:
-            resp = requests.get(
-                "https://api.openalex.org/works",
-                headers=headers,
-                params={
-                    "search": query,
-                    "sort": "publication_date:desc",
-                    "per_page": 10,
-                    "select": "id,doi,title,publication_date,abstract_inverted_index",
-                },
-                timeout=15,
-            )
-            resp.raise_for_status()
-            works = resp.json().get("results", [])
-        except Exception as e:
-            print(f"[OpenAlex] query failed: {query!r} — {e}")
-            continue
-
-        for work in works:
-            doi = work.get("doi") or ""
-            url = doi if doi else work.get("id", "")
-            if not url:
-                continue
-            title = work.get("title") or ""
-            pub_date = work.get("publication_date") or ""
-            abstract = _reconstruct_abstract(work.get("abstract_inverted_index"))
-            snippet = abstract if abstract else title
-            kws, entities = _tag_metadata(snippet, title, technologies, competitors)
-            results.append(
-                EvidenceItem(
-                    url=url,
-                    title=title,
-                    date=pub_date,
-                    snippet=snippet,
-                    domain="openalex.org",
-                    keywords=kws,
-                    entities=entities,
-                )
-            )
-
-    return results
+    return [ev for results in results_nested for ev in results]
 
 
-# ---------------------------------------------------------------------------
-# Agent entry point
-# ---------------------------------------------------------------------------
+async def _fetch_tavily(client: AsyncTavilyClient, query: str) -> list[dict]:
+    try:
+        results = await client.search(
+            query=query,
+            search_depth="advanced",
+            max_results=5,
+            include_raw_content=False,
+        )
+        print(f"[WebSearch/Tavily] ✓ {query!r}")
+        return results.get("results", [])
+    except Exception as e:
+        print(f"[WebSearch/Tavily] query failed: {query!r} — {e}")
+        return []
 
-def websearch_agent(state: AgentState) -> dict:
-    """T2: Multi-angle web search (Tavily) + academic paper search (OpenAlex)."""
+
+async def _run_async(state: AgentState) -> dict:
     scope = state["scope"]
     technologies = scope.get("technologies", [])
     competitors = scope.get("competitors", [])
     keywords = scope.get("keywords", [])
 
-    new_evidence: list[EvidenceItem] = []
     seen_urls: set[str] = {ev["url"] for ev in state.get("evidence_store", [])}
+    new_evidence: list[EvidenceItem] = []
 
-    # --- Tavily ---
-    client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+    # --- Tavily (parallel) ---
     queries = _build_queries(technologies, competitors, keywords)
-    for query in queries:
-        try:
-            results = client.search(
-                query=query,
-                search_depth="advanced",
-                max_results=5,
-                include_raw_content=False,
-            )
-            for r in results.get("results", []):
-                url = r.get("url", "")
-                if url in seen_urls:
-                    continue
-                seen_urls.add(url)
-                snippet = r.get("content", "")
-                title = r.get("title", "")
-                domain = url.split("/")[2] if url.startswith("http") else ""
-                kws, entities = _tag_metadata(snippet, title, technologies, competitors)
-                new_evidence.append(
-                    EvidenceItem(
-                        url=url,
-                        title=title,
-                        date=r.get("published_date", ""),
-                        snippet=snippet,
-                        domain=domain,
-                        keywords=kws,
-                        entities=entities,
-                    )
-                )
-        except Exception as e:
-            print(f"[WebSearch/Tavily] query failed: {query!r} — {e}")
+    print(f"[WebSearch] Firing {len(queries)} Tavily queries in parallel...")
+    client = AsyncTavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+    raw_results = await asyncio.gather(*[_fetch_tavily(client, q) for q in queries])
 
-    # --- OpenAlex ---
-    openalex_results = _search_openalex(technologies, keywords, competitors)
+    for results in raw_results:
+        for r in results:
+            url = r.get("url", "")
+            if url in seen_urls:
+                continue
+            seen_urls.add(url)
+            snippet = r.get("content", "")
+            title = r.get("title", "")
+            domain = url.split("/")[2] if url.startswith("http") else ""
+            kws, entities = _tag_metadata(snippet, title, technologies, competitors)
+            new_evidence.append(
+                EvidenceItem(
+                    url=url,
+                    title=title,
+                    date=r.get("published_date", ""),
+                    snippet=snippet,
+                    domain=domain,
+                    keywords=kws,
+                    entities=entities,
+                )
+            )
+
+    # --- OpenAlex (parallel per tech) ---
+    print("[WebSearch] Fetching OpenAlex papers in parallel...")
+    openalex_results = await _search_openalex_async(technologies, keywords, competitors)
     for ev in openalex_results:
         if ev["url"] in seen_urls:
             continue
@@ -188,7 +207,16 @@ def websearch_agent(state: AgentState) -> dict:
         domain_counts = Counter(ev["domain"] for ev in new_evidence)
         dominant_domain, dominant_count = domain_counts.most_common(1)[0]
         if dominant_count / total > 0.40:
-            # openalex.org concentration is expected for paper-heavy topics — WARNING only
             print(f"[WebSearch] WARNING: domain '{dominant_domain}' covers {dominant_count/total:.0%} of results.")
 
+    print(f"[WebSearch] Done — {total} evidence items collected.")
     return {"evidence_store": new_evidence}
+
+
+# ---------------------------------------------------------------------------
+# Agent entry point
+# ---------------------------------------------------------------------------
+
+def websearch_agent(state: AgentState) -> dict:
+    """T2: Multi-angle web search (Tavily) + academic paper search (OpenAlex)."""
+    return asyncio.run(_run_async(state))
