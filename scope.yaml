@@ -1,0 +1,26 @@
+# scope.yaml — T1 Scope Agent output template
+# Supervisor validates this file before T2 begins.
+# All fields must be populated (auto-checked by SC validator).
+
+technologies:
+  - HBM4
+  - PIM
+  - CXL
+
+competitors: []  # e.g., [Samsung, SK Hynix, Micron, Intel, AMD]
+
+keywords:
+  - HBM4 bandwidth memory
+  - Processing-in-Memory compute
+  - Compute Express Link interconnect
+  - memory semiconductor R&D
+
+n_evidence_min: 5          # SC1-1: minimum credible sources per technology
+max_competitors: 5         # Control strategy: scope explosion guard
+
+# Threat level decision rule (SC2-2) — fixed once confirmed
+threat_level_rules:
+  high: "TRL >= 7"
+  medium: "TRL 5-6"
+  low: "TRL <= 4"
+  escalation: "investment or hiring signal detected → upgrade one level"

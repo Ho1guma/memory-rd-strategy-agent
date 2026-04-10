@@ -1,0 +1,50 @@
+# Golden query set for Retrieval evaluation (Hit Rate@K, MRR)
+# Add relevant_doc_keywords to validate retrieved chunk relevance.
+# Run evaluate.py to benchmark embedding models and retrieval techniques.
+
+queries:
+  - id: q1
+    query: "HBM4 bandwidth specification and manufacturing readiness"
+    relevant_doc_keywords: ["HBM4", "bandwidth", "SK Hynix", "Samsung", "memory"]
+
+  - id: q2
+    query: "Processing-in-Memory compute architecture for AI workloads"
+    relevant_doc_keywords: ["PIM", "in-memory compute", "DRAM", "AI", "inference"]
+
+  - id: q3
+    query: "CXL memory pooling and disaggregated memory systems"
+    relevant_doc_keywords: ["CXL", "Compute Express Link", "memory pooling", "PCIe"]
+
+  - id: q4
+    query: "Samsung HBM4 production timeline and yield"
+    relevant_doc_keywords: ["Samsung", "HBM4", "production", "yield", "2025"]
+
+  - id: q5
+    query: "Micron HBM competitive position versus SK Hynix"
+    relevant_doc_keywords: ["Micron", "SK Hynix", "HBM", "competitive", "market share"]
+
+  - id: q6
+    query: "PIM limitations and challenges for commercial deployment"
+    relevant_doc_keywords: ["PIM", "limitation", "challenge", "power", "programming"]
+
+  - id: q7
+    query: "Intel CXL 3.0 fabric and data center adoption"
+    relevant_doc_keywords: ["Intel", "CXL", "3.0", "fabric", "data center"]
+
+  - id: q8
+    query: "HBM4 alternative technologies and comparison"
+    relevant_doc_keywords: ["HBM4", "GDDR7", "alternative", "vs", "comparison"]
+
+  - id: q9
+    query: "semiconductor R&D investment trends 2024 2025"
+    relevant_doc_keywords: ["investment", "R&D", "semiconductor", "2024", "2025"]
+
+  - id: q10
+    query: "AI memory bandwidth bottleneck and next generation solutions"
+    relevant_doc_keywords: ["memory bandwidth", "AI", "bottleneck", "next generation", "LLM"]
+
+# Evaluation parameters
+eval_params:
+  k_values: [1, 3, 5, 10]
+  min_hit_rate_at_5: 0.60   # Threshold for embedding model selection
+  min_mrr: 0.45
