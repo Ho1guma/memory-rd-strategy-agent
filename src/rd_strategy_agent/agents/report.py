@@ -45,21 +45,24 @@ Write a detailed Korean-language R&D strategy report in Markdown. Each section m
 
 **경쟁사 개발 현황**
 
-IMPORTANT: 각 기업은 반드시 아래와 같이 `### 번호. 기업명` 형식의 h3 헤딩으로 작성할 것. 헤딩 없이 bullet만 쓰는 것 금지.
+IMPORTANT:
+- evidence에서 해당 기술을 직접 개발하거나 채택한 증거가 있는 기업만 포함. 증거 없으면 해당 기업 섹션 생략.
+- 해당 기술과 다른 개념의 대체 기술(예: HBM4 대신 자체 고대역폭 메모리 아키텍처)을 추구하는 경우, 이 섹션에서는 한 줄로 "(회사명)은 해당 기술 대신 대체 아키텍처를 추구함 → 섹션 4 참조"로만 언급하고 상세 내용은 섹션 4 장기 파트에 작성.
+- 각 기업은 `### 번호. 기업명` 형식의 h3 헤딩으로 작성.
 
 ### 1. Samsung
 - 개발 중인 제품·공정 세대, 구체적 투자 규모 또는 공시 내용 [N]
-- 채용 동향 (JD 키워드, 채용 규모 신호) [N]
+- 채용 동향 [N]
 
 ### 2. Micron
 - 개발 중인 제품·공정 세대, 구체적 투자 규모 또는 공시 내용 [N]
 - 채용 동향 [N]
 
 ### 3. Intel
-- HBM 수요·채택 측면 동향 [N]
+- evidence에 HBM4 직접 개발 증거 있으면 서술, 없으면 "대체 아키텍처 추구 → 섹션 4 참조" 한 줄로 처리 [N]
 
 ### 4. AMD
-- HBM 수요·채택 측면 동향 [N]
+- evidence에 해당 기술 증거 있으면 서술, 없으면 섹션 생략
 
 **SK Hynix 포지션**
 - 당사 제품 현황, 시장 점유율, 강점·약점 분석 [N]
@@ -124,9 +127,15 @@ IMPORTANT: 각 경쟁사별 위협 요인은 반드시 아래와 같이 `### 기
 - 포트폴리오 투자 방향, 파트너십·M&A 고려 사항
 
 **장기 / 신규 개념 (3~5년+)**
-- 현재 연구 단계이지만 선점이 필요한 차세대 기술 컨셉 3개 이상
-  (예: CXL 3.0/4.0 Fabric, Neuromorphic PIM, 3D-stacked Compute Memory, In-Memory AI Accelerator 등)
-- 각 컨셉별 경쟁사 선점 리스크 및 SK Hynix 대응 방향
+- 섹션 2에서 "대체 아키텍처 추구 → 섹션 4 참조"로 표시된 기술을 여기서 상세 서술
+- evidence에서 확인된 차세대·대체 기술 컨셉을 각각 아래 형식으로 작성:
+
+  **[기술/컨셉명]**
+  - 개요: 어떤 문제를 어떤 방식으로 해결하는지 (기존 기술과 무엇이 다른지) [N]
+  - 개발 주체: 어느 기업/스타트업이 추진 중인지 [N]
+  - SK Hynix 관련성: 위협 또는 협력 가능성, 대응 방향
+
+- evidence에 없는 컨셉은 작성 금지
 
 ---
 
@@ -136,9 +145,12 @@ IMPORTANT: 각 경쟁사별 위협 요인은 반드시 아래와 같이 `### 기
 ---
 
 IMPORTANT writing rules:
-- 모든 사실적 주장에 [N] 인용 필수 — 인용 없는 단락 금지. 가능한 한 많은 source를 인용할 것.
-- 제공된 sources ID만 사용 (없는 번호 금지)
-- TRL 4~6은 "(추정)" 표기 + 간접 지표 명시
+- **할루시네이션 금지**: 모든 기술명·제품명·수치·투자액·공정 세대는 반드시 제공된 sources snippet에서 확인된 내용만 작성. sources에 없는 사실은 절대 서술 금지.
+- **TRL만 쓰지 말 것**: "TRL 7이다"처럼 숫자만 나열하지 말고, 반드시 근거 기술을 함께 서술. 예) "HBM4는 12-high 스태킹과 TSV 피치 축소를 통해 1.2TB/s 대역폭을 달성하며 [N], 삼성은 4nm 공정 기반 양산을 2025년 Q3부터 시작했다 [N]."
+- **구체성 강제**: 기업별 서술에 제품 코드명·공정 노드·투자 금액·채용 JD 키워드 등 sources에서 확인 가능한 구체적 사실을 포함할 것
+- 모든 사실적 주장에 [N] 인용 필수 — 인용 없는 단락 금지
+- 제공된 sources ID만 사용 (sources에 없는 번호 사용 금지)
+- TRL 4~6은 "(추정)" 표기 + 어떤 간접 지표(채용·특허·컨퍼런스 발표 등)로 추정했는지 명시
 - 기업별 개발 현황은 반드시 번호 목록(1. 2. 3. 4.) 형식
 - 도표(Markdown table)는 섹션 3에서 반드시 2개 이상 포함
 - 언어: 한국어 (기술 용어 영문 병기)
@@ -175,6 +187,7 @@ _SECTION_QUERIES = {
         "next generation memory technology beyond HBM neuromorphic PIM",
         "CXL future standard 3D stacked memory concept",
         "semiconductor memory long term research emerging technology",
+        "competitor HBM alternative next generation memory 2025 2026",
     ],
     "startups": [
         "HBM PIM CXL memory startup emerging company funding 2024 2025",
