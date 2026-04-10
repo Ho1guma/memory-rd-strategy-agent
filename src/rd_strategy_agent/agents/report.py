@@ -8,7 +8,7 @@ from __future__ import annotations
 import re
 from datetime import date
 
-from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from rd_strategy_agent.state import AgentState, ReferenceItem
@@ -45,7 +45,7 @@ Rules:
 
 def report_agent(state: AgentState) -> dict:
     """T6: Draft full report from analysis outputs."""
-    llm = ChatAnthropic(model="claude-opus-4-6", temperature=0.2, max_tokens=8000)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, max_tokens=8000)
 
     import json
     evidence_urls = [

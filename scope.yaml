@@ -21,6 +21,6 @@ max_competitors: 5         # Control strategy: scope explosion guard
 # Threat level decision rule (SC2-2) — fixed once confirmed
 threat_level_rules:
   high: "TRL >= 7"
-  medium: "TRL 5-6"
-  low: "TRL <= 4"
+  medium: "TRL 4-6"
+  low: "TRL <= 3"
   escalation: "investment or hiring signal detected → upgrade one level"

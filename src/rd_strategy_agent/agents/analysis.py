@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 
-from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from rd_strategy_agent.state import AgentState, TRLEntry, ThreatEntry
@@ -48,7 +48,7 @@ def _evidence_summary(state: AgentState) -> str:
 
 def analysis_agent(state: AgentState) -> dict:
     """T4 + T5: Estimate TRL and threat level for each competitor."""
-    llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     scope = state["scope"]
     evidence_text = _evidence_summary(state)
     context = (

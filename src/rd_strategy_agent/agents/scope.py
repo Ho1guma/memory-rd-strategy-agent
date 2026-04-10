@@ -8,7 +8,7 @@ from __future__ import annotations
 import yaml
 from pathlib import Path
 
-from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from rd_strategy_agent.state import AgentState
@@ -19,7 +19,7 @@ Your job is to confirm or refine the analysis scope based on the user query.
 Output ONLY valid YAML with exactly these fields:
 - technologies: list of technology names (max 3)
 - competitors: list of company names (max 5)
-- keywords: list of search keywords (5–15 items)
+- keywords: list of search keywords (5~15 items)
 - n_evidence_min: integer (recommended: 5)
 - max_competitors: integer (max 5)
 
@@ -31,7 +31,7 @@ SCOPE_YAML_PATH = Path("scope.yaml")
 
 def scope_agent(state: AgentState) -> dict:
     """T1: Determine and lock analysis scope."""
-    llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
     user_query = state.get("next_task", "Analyze HBM4, PIM, CXL R&D landscape and competitor positioning.")
 

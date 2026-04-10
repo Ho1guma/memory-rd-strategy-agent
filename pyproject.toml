@@ -4,10 +4,10 @@ version = "0.1.0"
 description = "HBM4/PIM/CXL R&D strategy analysis agent using multi-agent workflow"
 requires-python = ">=3.11"
 dependencies = [
-    "anthropic>=0.40.0",
+    "openai>=1.50.0",
     "langgraph>=0.2.0",
     "langchain-core>=0.3.0",
-    "langchain-anthropic>=0.3.0",
+    "langchain-openai>=0.3.0",
     "tavily-python>=0.5.0",
     "sentence-transformers>=3.0.0",
     "chromadb>=0.5.0",
