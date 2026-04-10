@@ -6,14 +6,66 @@ Analysis/Report 에이전트가 company×technology별 쿼리로 관련 증거 t
 
 - 임베딩: BAAI/bge-m3 (retrieve agent와 동일 모델, 모듈 레벨 캐싱)
 - 저장: 프로세스 내 전역 변수 (FAISS 객체는 직렬화 불가 → TypedDict state 저장 불가)
+- 검색 필터: 유사도 점수 임계값 + 반도체 도메인 관련성 필터 + 날짜 페널티
 """
 
+import os
+from datetime import date
 from typing import Optional
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 
 from agents.state import EvidenceItem
 from agents.embeddings import get_embeddings
+
+# FAISS L2 거리 기준: 낮을수록 유사. bge-m3 정규화 벡터 기준 1.2 이상이면 관련성 낮음
+# (0=동일, 2=완전 반대 방향). 환경변수로 조정 가능
+SCORE_THRESHOLD = float(os.environ.get("EVIDENCE_SCORE_THRESHOLD", "1.2"))
+
+# 날짜 페널티: 현재 연도 - 기사 연도가 클수록 페널티. 이 값을 초과하면 검색 결과에서 제외.
+# 환경변수로 조정 가능: EVIDENCE_MAX_AGE_YEARS=3
+_MAX_AGE_YEARS = int(os.environ.get("EVIDENCE_MAX_AGE_YEARS", "3"))
+_CURRENT_YEAR = date.today().year
+
+
+def _date_penalty(item: EvidenceItem) -> float:
+    """기사 연도에 따른 L2 거리 페널티 반환.
+    - 올해/작년: 0.0 (페널티 없음)
+    - 2년 전: 0.1
+    - 3년 전: 0.2
+    - 4년 이상: 0.4 (거의 제외 수준)
+    논문·특허는 페널티 절반 적용 (연구 성과는 발행 후에도 유효)
+    """
+    pub_date = item.get("date", "") or item.get("publication_date", "")
+    try:
+        pub_year = int(str(pub_date)[:4])
+    except (ValueError, TypeError):
+        return 0.0  # 날짜 불명확 → 페널티 없음
+
+    age = _CURRENT_YEAR - pub_year
+    if age <= 1:
+        penalty = 0.0
+    elif age == 2:
+        penalty = 0.1
+    elif age == 3:
+        penalty = 0.2
+    else:
+        penalty = 0.4
+
+    # 논문·특허는 절반 페널티
+    if item.get("source_type") in ("paper", "patent"):
+        penalty *= 0.5
+
+    return penalty
+
+# 반도체 도메인 관련성 키워드 (academic_search.py와 동일 기준)
+_SEMICONDUCTOR_KEYWORDS = {
+    "semiconductor", "memory", "chip", "wafer", "dram", "nand", "flash",
+    "hbm", "pim", "cxl", "compute", "processing", "bandwidth", "interconnect",
+    "cache", "tsv", "packaging", "fabrication", "lithography", "transistor",
+    "integrated circuit", "soc", "fpga", "gpu", "cpu", "trl", "ai accelerator",
+    "near-memory", "in-memory", "compute express", "high bandwidth",
+}
 
 # FAISS 인덱스 싱글턴 (임베딩 싱글턴은 agents.embeddings에서 관리)
 _faiss_index: Optional[FAISS] = None
@@ -54,23 +106,65 @@ def build_evidence_index(evidence_store: list[EvidenceItem]) -> bool:
         return False
 
 
-def query_evidence(query: str, k: int = 8) -> list[EvidenceItem]:
+def _is_semiconductor_relevant(item: EvidenceItem) -> bool:
+    """제목+스니펫에 반도체 도메인 키워드가 하나라도 있어야 통과"""
+    text = (item.get("title", "") + " " + item.get("snippet", "")).lower()
+    return any(kw in text for kw in _SEMICONDUCTOR_KEYWORDS)
+
+
+def query_evidence(query: str, k: int = 8, score_threshold: float | None = None) -> list[EvidenceItem]:
     """
     쿼리와 관련된 증거 top-k를 반환.
-    인덱스 미구축 시 빈 리스트 반환.
+    - score_threshold: FAISS L2 거리 상한 (기본값: SCORE_THRESHOLD 환경변수)
+      낮은 유사도(높은 거리) 항목을 제거해 노이즈 차단
+    - 반도체 도메인 관련성 필터 적용
+    - 인덱스 미구축 시 빈 리스트 반환.
     """
     if _faiss_index is None or not _evidence_map:
         return []
 
+    threshold = score_threshold if score_threshold is not None else SCORE_THRESHOLD
+
     try:
-        results = _faiss_index.similarity_search(query, k=min(k, len(_evidence_map)))
+        # k*2 후보를 뽑아 필터링 후 k개 반환
+        fetch_k = min(k * 2, len(_evidence_map))
+        results_with_scores = _faiss_index.similarity_search_with_score(query, k=fetch_k)
+
         evidence_items = []
         seen_idx = set()
-        for doc in results:
+        filtered_score = 0
+        filtered_domain = 0
+
+        filtered_old = 0
+        for doc, score in results_with_scores:
+            if len(evidence_items) >= k:
+                break
             idx = doc.metadata.get("evidence_idx")
-            if idx is not None and idx not in seen_idx and idx in _evidence_map:
-                evidence_items.append(_evidence_map[idx])
-                seen_idx.add(idx)
+            if idx is None or idx in seen_idx or idx not in _evidence_map:
+                continue
+            item = _evidence_map[idx]
+
+            # 날짜 페널티를 L2 거리에 가산해 구형 기사를 자연스럽게 후순위로
+            penalty = _date_penalty(item)
+            effective_score = score + penalty
+
+            if effective_score > threshold:
+                filtered_score += 1
+                # 4년+ 구형 기사는 별도 카운트
+                if penalty >= 0.4:
+                    filtered_old += 1
+                continue
+            if not _is_semiconductor_relevant(item):
+                filtered_domain += 1
+                continue
+            evidence_items.append(item)
+            seen_idx.add(idx)
+
+        if filtered_score or filtered_domain or filtered_old:
+            print(
+                f"[EvidenceIndex] 쿼리 필터: 점수초과 {filtered_score}건 (구형기사 {filtered_old}건 포함), "
+                f"도메인무관 {filtered_domain}건 제거 → {len(evidence_items)}건 반환"
+            )
         return evidence_items
     except Exception as e:
         print(f"[EvidenceIndex] 쿼리 실패 ({query[:40]}...): {e}")

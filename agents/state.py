@@ -34,6 +34,7 @@ class ThreatRow(TypedDict):
     technology: str       # "HBM4" | "PIM" | "CXL" 등
     level: str            # "낮음" | "중간" | "높음"
     rationale: str
+    investment_signal: NotRequired[str]   # 투자·채용·파트너십 등 TRL 상향 신호 (선택)
 
 
 class ReferenceItem(TypedDict):

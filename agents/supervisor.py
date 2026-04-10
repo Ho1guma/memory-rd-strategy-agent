@@ -163,25 +163,35 @@ def _check_sc3(state: AgentState) -> SCStatus:
     # SC3-1: SUMMARY + 목차 + REFERENCE 섹션 존재
     # 프롬프트 구조: SUMMARY, 0.(앞페이지), 1.(배경), 2.(기술현황), 3.(경쟁사), 5.(시사점), REFERENCE
     # 섹션 4(장기신기술)는 선택적 → 필수 체크 제외
-    required_sections = ["SUMMARY", "1.", "2.", "3.", "5.", "REFERENCE"]
+    required_sections = ["SUMMARY", "최우선 행동 권고안", "1.", "2.", "3.", "4.", "REFERENCE"]
     sc3_1_pass = all(sec in draft for sec in required_sections)
     sc_status["sc3_1"] = "pass" if sc3_1_pass else "fail"
 
-    # SC3-2: REFERENCE 내 citation_id, url, title, accessed_date 모두 존재
-    sc3_2_pass = bool(reference_list) and all(
-        ref.get("citation_id") and ref.get("url") and ref.get("title") and ref.get("accessed_date")
-        for ref in reference_list
-    )
+    # SC3-2: REFERENCE 내 citation_id, title, accessed_date 모두 존재
+    # "매핑 불가" 항목은 url=""이 의도적이므로 url 체크 제외 (citation_id+title+accessed_date만 필수)
+    def _ref_valid(ref: dict) -> bool:
+        if not ref.get("citation_id") or not ref.get("accessed_date"):
+            return False
+        title = ref.get("title", "")
+        if not title:
+            return False
+        # 매핑 불가 항목: URL 없어도 허용
+        if "매핑 불가" in title:
+            return True
+        return bool(ref.get("url"))
+
+    sc3_2_pass = bool(reference_list) and all(_ref_valid(ref) for ref in reference_list)
     sc_status["sc3_2"] = "pass" if sc3_2_pass else "fail"
 
-    # SC3-summary_len: SUMMARY 400자 이내 (PROJECT_PLAN SC3-1 요구사항)
+    # SC3-summary_len: SUMMARY 700자 이내 (최우선 행동 권고안 블록 포함)
+    # 패턴: `# SUMMARY` 또는 `SUMMARY` 제목 다음 줄부터 다음 `#` 제목까지 캡처
     summary_match = re.search(
-        r"(?:^|\n)(?:#+\s*)?SUMMARY\s*\n(.*?)(?=\n(?:#+\s*)?\d+\.|\Z)",
+        r"#\s*SUMMARY[^\n]*\n(.*?)(?=\n#|\Z)",
         draft, re.DOTALL,
     )
     if summary_match:
         summary_text = re.sub(r"[#*_\[\]()]", "", summary_match.group(1)).strip()
-        sc_status["sc3_summary_len"] = "pass" if len(summary_text) <= 400 else "fail"
+        sc_status["sc3_summary_len"] = "pass" if len(summary_text) <= 700 else "fail"
         sc_status["sc3_summary_actual_len"] = len(summary_text)
     else:
         sc_status["sc3_summary_len"] = "fail"
@@ -233,12 +243,12 @@ def _build_structural_feedback(sc_status: dict) -> str:
     """SC3 구조·규칙 검증 실패 시 구체적 피드백 생성"""
     lines = []
     if sc_status.get("sc3_1") != "pass":
-        lines.append("- 필수 섹션 누락: SUMMARY, 1.~6., REFERENCE 섹션이 모두 존재해야 합니다")
+        lines.append("- 필수 섹션 누락: SUMMARY, 최우선 행동 권고안, 1.~4., REFERENCE 섹션이 모두 존재해야 합니다")
     if sc_status.get("sc3_2") != "pass":
         lines.append("- REFERENCE 항목의 citation_id/url/title/accessed_date 필드가 불완전합니다")
     if sc_status.get("sc3_summary_len") != "pass":
         actual = sc_status.get("sc3_summary_actual_len", "?")
-        lines.append(f"- SUMMARY가 400자를 초과합니다 (현재 {actual}자) — 핵심만 압축하세요")
+        lines.append(f"- SUMMARY가 700자를 초과합니다 (현재 {actual}자) — 핵심만 압축하세요")
     if sc_status.get("sc3_forbidden") != "pass":
         found = sc_status.get("sc3_forbidden_found", [])
         lines.append(f"- Compliance 위반 표현 감지: {'; '.join(found)} — 수율·원가 단정 금지")
@@ -379,6 +389,7 @@ def supervisor_after_report(state: AgentState) -> dict:
             "next": "report",
         }
 
+    # Phase 1 통과 시 last_error 초기화 (이전 재시도 에러가 다음 실행에 영향 주지 않도록)
     # Phase 2: LLM 품질 검수 (Advisory — 항상 통과, 이슈 로깅만)
     # gpt-4o-mini 기반 검수는 false positive가 많아 gate로 사용하지 않음
     print("[Supervisor] SC3 Phase 1 통과 → Phase 2 LLM 품질 검수 (Advisory)...")
@@ -405,7 +416,7 @@ def supervisor_after_report(state: AgentState) -> dict:
         print("[Supervisor] 품질 검수 Advisory: 이슈 없음")
 
     print("[Supervisor] SC 전체 통과 → 보고서 완성")
-    return {"sc_status": sc_status, "next": "end"}
+    return {"sc_status": sc_status, "last_error": None, "next": "end"}
 
 
 def escalate(state: AgentState) -> dict:
