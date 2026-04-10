@@ -57,7 +57,7 @@
 │   └── evaluate.py           # Hit Rate@K / MRR 측정
 ├── tests/
 │   └── test_sc_checker.py
-├── scope.yaml                # 분석 범위 수동 설정 (실행 전 필수)
+├── scope.yaml                # 분석 범위 수동 설정 — technologies, competitors 등 (실행 전 필수)
 ├── .env.example
 └── pyproject.toml
 ```
